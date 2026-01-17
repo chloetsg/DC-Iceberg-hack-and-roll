@@ -40,17 +40,8 @@ class StrictValidator:
             else:
                 return False, f"I think that's '{target_text}', but your handwriting is too shaky (Conf: {confidence:.2f})."
             
-        else: 
-            correct_count = 0
-            total_count = len(target_text)
-            for text in target_text:
-                if text in detected_text:
-                    correct_count += 1
-            
-            score = correct_count / total_count
-            if score > 0.5:
-                return True, f"Score={score} \nClose enough! Expected {target_text}"
-            else:
-                return False, f"Score={score} \nTry again! Expected {target_text}"
+        else:
+            # Exact match required - case sensitive
+            return False, f"You wrote '{detected_text}', expected '{target_text}'"
         
         #return False, f"You wrote '{detected_text}', expected '{target_text}'."
