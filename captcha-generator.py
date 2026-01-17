@@ -1,10 +1,23 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
 import string
+import os
 
-def create_captcha(text, width=250, height=100):
+def read_bg(folder_path):
+    valid_extensions = ('.jpg', '.jpeg')
+    files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
+
+    if not files:
+        raise FileNotFoundError("No images found in the specified folder.")
+
+    bg_path = os.path.join(folder_path, random.choice(files))
+    bg_image = Image.open(bg_path).convert('RGB')
+    print(bg_path.split("\\")[-1].split(".")[0])
+    return bg_image, bg_image.width, bg_image.height
+
+def create_captcha(text):
     # Create a blank image
-    img = Image.new('RGB', (width, height), color=(255, 255, 255))
+    img, width, height = read_bg("./mall-images")
     draw = ImageDraw.Draw(img)
     
     valid_fonts = ["arialbd.ttf", "ariblk.ttf", 
@@ -31,10 +44,10 @@ def create_captcha(text, width=250, height=100):
         draw.text((0 + i*random.randint(40,50), random.randint(0,100-sizes[i])), char, font=font, fill=char_color)
 
     # Add some random "scribble" lines before the text
-    for _ in range(random.randint(10,15)):
+    for _ in range(random.randint(15,30)):
         shape = random.choice(shapes)
         if shape == 'line':
-            points = [(random.randint(0, width), random.randint(0, height)) for _ in range(random.randint(2,5))]
+            points = [(random.randint(0, width), random.randint(0, height)) for _ in range(random.randint(2,10))]
             draw.line(points, fill=(random.randint(0,255), random.randint(0,255), random.randint(0,255)), width=random.randint(1,5), joint="curve")
         elif shape == 'arc':
             # Define a random bounding box for the arc
@@ -47,7 +60,7 @@ def create_captcha(text, width=250, height=100):
             draw.arc(points, start=start_angle, end=end_angle, fill=arc_color, width=3)
 
     # Add random dots as noise
-    for _ in range(2000):
+    for _ in range(int(0.005 * width * height)):
         draw.point((random.randint(0, width), random.randint(0, height)), fill=(0, 0, 0))
     
     return img
