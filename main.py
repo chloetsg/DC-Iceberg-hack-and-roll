@@ -13,8 +13,9 @@ class CaptchaApp:
     def __init__(self, root):
         self.root = root
         self.root.title("CAPTCHA Challenge")
-        self.root.geometry("900x700")
+        self.root.geometry("900x750")
         self.root.configure(bg="#667eea")
+        self.root.resizable(True, True)  # Allow window resizing
 
         # Variables
         self.captcha_text = None
@@ -73,17 +74,17 @@ class CaptchaApp:
 
         # Convert PIL image to PhotoImage
         # Resize to fit within reasonable bounds - leave room for button
-        max_width = 700
-        max_height = 250  # Restrict height to ensure button is visible
+        max_width = 600
+        max_height = 200  # Restrict height to ensure button is visible
 
         # Calculate ratio to fit both width and height constraints
         width_ratio = max_width / captcha_pil.width if captcha_pil.width > max_width else 1
         height_ratio = max_height / captcha_pil.height if captcha_pil.height > max_height else 1
         ratio = min(width_ratio, height_ratio)
 
-        if ratio < 1:
-            new_size = (int(captcha_pil.width * ratio), int(captcha_pil.height * ratio))
-            captcha_pil = captcha_pil.resize(new_size, Image.Resampling.LANCZOS)
+        # Always resize to fit constraints
+        new_size = (int(captcha_pil.width * ratio), int(captcha_pil.height * ratio))
+        captcha_pil = captcha_pil.resize(new_size, Image.Resampling.LANCZOS)
 
         self.captcha_photo = ImageTk.PhotoImage(captcha_pil)
         img_label = tk.Label(main_frame, image=self.captcha_photo,
@@ -92,10 +93,10 @@ class CaptchaApp:
 
         # Start button
         start_btn = tk.Button(main_frame, text="Start Drawing",
-                             font=("Arial", 14, "bold"), bg="#667eea", fg="white",
-                             padx=30, pady=10, command=self.open_canvas,
-                             relief=tk.RAISED, cursor="hand2")
-        start_btn.pack(pady=0)
+                             font=("Arial", 12, "bold"), bg="#667eea", fg="white",
+                             padx=40, pady=12, command=self.open_canvas,
+                             relief=tk.RAISED, cursor="hand2", wraplength=200)
+        start_btn.pack(pady=10)
 
     def open_canvas(self):
         """Open the drawing canvas while keeping CAPTCHA visible"""
@@ -156,16 +157,27 @@ class CaptchaApp:
         self.start_cursor_effect()
 
     def start_cursor_effect(self):
-        """Start the teleporting cursor executable"""
+        """Start the teleporting cursor executable or AHK script"""
+        # Try .exe first, then .ahk
         cursor_exe_path = r'cursor\teleporting_cursor.exe'
+        cursor_ahk_path = r'cursor\teleporting_cursor.ahk'
+
         if os.path.exists(cursor_exe_path):
             try:
                 self.cursor_process = subprocess.Popen([cursor_exe_path])
-                print("Cursor effect started")
+                print("Cursor effect started (EXE)")
             except Exception as e:
                 print(f"Failed to start cursor effect: {e}")
+        elif os.path.exists(cursor_ahk_path):
+            try:
+                # Run AHK script directly (requires AutoHotkey v2 installed)
+                self.cursor_process = subprocess.Popen(['AutoHotkey.exe', cursor_ahk_path])
+                print("Cursor effect started (AHK)")
+            except Exception as e:
+                print(f"Failed to start cursor AHK: {e}")
+                print("Continuing without cursor effect")
         else:
-            print("Cursor executable not found, continuing without effect")
+            print("Cursor executable/script not found, continuing without effect")
 
     def stop_cursor_effect(self):
         """Stop the teleporting cursor effect"""
@@ -208,6 +220,8 @@ class CaptchaApp:
 
         # Save canvas as image
         try:
+            print(f"Validating against captcha text: {self.captcha_text}")
+
             # Get canvas dimensions
             width = self.canvas.winfo_width()
             height = self.canvas.winfo_height()
@@ -216,18 +230,33 @@ class CaptchaApp:
             canvas_image = np.zeros((height, width, 3), dtype=np.uint8)
 
             # Get all canvas items and draw them on the numpy array
+            item_count = 0
             for item in self.canvas.find_all():
                 coords = self.canvas.coords(item)
                 if len(coords) >= 4:
                     # Draw line
                     x1, y1, x2, y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
                     cv2.line(canvas_image, (x1, y1), (x2, y2), (255, 255, 255), 5)
+                    item_count += 1
+
+            print(f"Drew {item_count} line segments to image")
 
             # Save the image
             cv2.imwrite('my_drawing.png', canvas_image)
+            print("Saved drawing to my_drawing.png")
+
+            # Check if canvas is empty
+            if item_count == 0:
+                messagebox.showwarning("Empty Canvas", "Please draw something before submitting!")
+                return
+
+            # Show loading message
+            messagebox.showinfo("Validating...", "Please wait while we validate your handwriting.\nThis may take a few seconds...")
 
             # Validate the drawing
+            print("Starting validation...")
             success = validate_writing('my_drawing.png', self.captcha_text)
+            print(f"Validation result: {success}")
 
             if success:
                 messagebox.showinfo("Success!", "Validation Passed!\n\nStarting final challenge...")
@@ -243,11 +272,13 @@ class CaptchaApp:
                 # Return to start screen
                 self.show_captcha_screen()
             else:
-                messagebox.showerror("Failed", "Validation failed. Please try again.")
+                messagebox.showerror("Failed", "Validation failed. Please try again.\n\nMake sure to write clearly!")
 
         except Exception as e:
             messagebox.showerror("Error", f"Error processing image: {str(e)}")
             print(f"Error details: {e}")
+            import traceback
+            traceback.print_exc()
 
 def main():
     root = tk.Tk()

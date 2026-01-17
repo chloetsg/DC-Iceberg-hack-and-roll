@@ -2,10 +2,10 @@
 #SingleInstance Force
 
 ; Configuration
-global isActive := false
-global boundaryRestrictionEnabled := true  ; ON by default
-global minInterval := 1000    ; Minimum time between teleports (ms)
-global maxInterval := 2000   ; Maximum time between teleports (ms)
+global isActive := true  ; Auto-start enabled
+global boundaryRestrictionEnabled := false  ; OFF by default for tkinter compatibility
+global minInterval := 500    ; Minimum time between teleports (ms)
+global maxInterval := 1500   ; Maximum time between teleports (ms)
 
 ; Canvas bounds (loaded from config file)
 canvasLeft := 0
@@ -84,6 +84,16 @@ Jxon_Load(&src) {
     SetTimer(RemoveTooltip, -1500)
 }
 
+; Auto-start the teleporting effect
+StartTeleporting() {
+    global isActive
+    if (isActive) {
+        ; Load canvas bounds when enabling effect (optional for tkinter)
+        LoadCanvasBounds()
+        SetTimer(TeleportCursor, RandomInterval())
+    }
+}
+
 ; Shift+T to toggle teleporting effect
 +t:: {
     global isActive
@@ -104,6 +114,9 @@ Jxon_Load(&src) {
         SetTimer(TeleportCursor, 0)  ; Disable timer
     }
 }
+
+; Start on launch
+StartTeleporting()
 
 TeleportCursor() {
     global isActive, canvasLeft, canvasTop, canvasRight, canvasBottom, boundaryRestrictionEnabled

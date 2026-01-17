@@ -62,14 +62,27 @@ def create_captcha(text):
     sizes = [random.randint(*sorted([int(0.25*width), int(0.4*height)])) for i in text]
     shapes = ['arc', 'line']
 
+    # Calculate proper spacing to avoid overlap
+    x_position = 20  # Start with some margin from the left
+
     for i, char in enumerate(text):
         font = ImageFont.truetype(random.choice(valid_fonts), sizes[i]) #set font
         char_color = (random.randint(0, 240), random.randint(0, 240), random.randint(0, 240))
+
         # Random vertical jitter
-        draw.text((0 + i*random.randint(sizes[i],sizes[i]+10), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
+        y_position = random.randint(0, height - sizes[i])
+
+        # Draw the character
+        draw.text((x_position, y_position), char, font=font, fill=char_color)
+
+        # Move x_position to the right, ensuring no overlap
+        # Add the character width plus some spacing
+        char_bbox = draw.textbbox((x_position, y_position), char, font=font)
+        char_width = char_bbox[2] - char_bbox[0]
+        x_position += char_width + random.randint(5, 15)  # Add spacing between characters
 
     # Add some random "scribble" lines before the text
-    for _ in range(random.randint(20,50)):
+    for _ in range(random.randint(5,10)):
         shape = random.choice(shapes)
         if shape == 'line':
             points = [(random.randint(0, width), random.randint(0, height)) for _ in range(random.randint(2,10))]
