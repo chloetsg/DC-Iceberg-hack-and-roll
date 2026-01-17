@@ -1,5 +1,5 @@
 import cv2
-from validator import StrictValidator  # Assuming you saved the class in validator.py
+from api.validator import StrictValidator  # Assuming you saved the class in validator.py
 
 
 def validate_writing(img_path, captcha_text):
