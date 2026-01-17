@@ -1,5 +1,3 @@
-from api.reco_main import validate_writing
-from api.video import perform_67
 import api.captcha_generator as captcha_generator
 from PIL import Image
 import io
