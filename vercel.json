@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/main.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/",
-      "destination": "/public/mainpage.html"
+      "destination": "/public/index.html"
     }
   ]
 }
