@@ -37,6 +37,10 @@
         startBtn.onclick = async function() {
             // 1. Request the image from your Python function
             const response = await fetch('/api/get_captcha');
+            
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
             const data = await response.json();
 
             // 2. Insert the Base64 string into the image tag

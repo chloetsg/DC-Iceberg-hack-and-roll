@@ -34,7 +34,7 @@ def ocr_verify(image_path, api_key):
         return result['ParsedResults'][0]['ParsedText'].strip()
     return ""
 
-@app.route('/api/get_captcha', methods=['GET'])
+@app.route('/api/get-captcha', methods=['GET'])
 def get_captcha():
     # create captcha here
     captcha_text, location, image = captcha_generator.generate_captcha()
