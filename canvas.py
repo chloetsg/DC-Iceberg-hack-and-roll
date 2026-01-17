@@ -1,10 +1,13 @@
 import cv2
 import numpy as np
+import json
+import os
 
 # --- Configuration ---
 CANVAS_SIZE = (600, 800) # Height, Width
 PEN_COLOR = (255, 255, 255) # White
 PEN_THICKNESS = 5
+CONFIG_FILE = "canvas_bounds.json"
 
 # State variables
 drawing = False
@@ -43,8 +46,38 @@ print("  Clear: 'c'")
 print("  Save: 's'")
 print("  Quit: 'q'")
 
+# Get window position and save bounds for AHK scripts
+window_shown = False
+
 while True:
     cv2.imshow("Draw Here", canvas)
+
+    # After first frame, get window position and save to config
+    if not window_shown:
+        cv2.waitKey(100)  # Wait for window to be fully created
+        try:
+            # Get window position (x, y) - top-left corner
+            x, y = cv2.getWindowImageRect("Draw Here")[:2]
+
+            # Calculate bounds
+            bounds = {
+                "left": x,
+                "top": y,
+                "right": x + CANVAS_SIZE[1],  # x + width
+                "bottom": y + CANVAS_SIZE[0],  # y + height
+                "width": CANVAS_SIZE[1],
+                "height": CANVAS_SIZE[0]
+            }
+
+            # Save to JSON file
+            with open(CONFIG_FILE, 'w') as f:
+                json.dump(bounds, f, indent=2)
+
+            print(f"\nCanvas bounds saved to {CONFIG_FILE}")
+            print(f"Position: ({x}, {y}), Size: {CANVAS_SIZE[1]}x{CANVAS_SIZE[0]}")
+            window_shown = True
+        except:
+            pass  # Window might not be ready yet
     
     key = cv2.waitKey(1) & 0xFF
     
