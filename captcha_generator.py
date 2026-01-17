@@ -91,8 +91,11 @@ def create_captcha(text):
     return img, location
 
 # Usage
-valid_characters = "23456789abdefghijmnqrtyABDEFGHJLMNQRTY"
-captcha_text = ''.join(random.choices(valid_characters, k=5))
-print(captcha_text)
-image, location = create_captcha(captcha_text)
-image.save("captcha.png")
+def generate_captcha():
+    valid_characters = "23456789abdefghijmnqrtyABDEFGHJLMNQRTY"
+    captcha_text = ''.join(random.choices(valid_characters, k=5))
+
+    image, location = create_captcha(captcha_text)
+    image.save("captcha.png")
+
+    return captcha_text, location
