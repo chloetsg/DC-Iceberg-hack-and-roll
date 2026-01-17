@@ -1,4 +1,3 @@
-from turtle import width
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
 import string
