@@ -12,11 +12,11 @@ global maxInterval := 2000   ; Maximum time between teleports (ms)
     isActive := !isActive
     
     if (isActive) {
-        ToolTip("Random Cursor: ON")
+        ToolTip("TP: ON")
         SetTimer(RemoveTooltip, -1500)
         SetTimer(TeleportCursor, RandomInterval())
     } else {
-        ToolTip("Random Cursor: OFF")
+        ToolTip("TP: OFF")
         SetTimer(RemoveTooltip, -1500)
         SetTimer(TeleportCursor, 0)  ; Disable timer
     }
