@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPTCHA Challenge</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 90%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .captcha-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .captcha-image {
+            max-width: 100%;
+            height: auto;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .canvas-section {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .canvas-section.active {
+            display: block;
+        }
+
+        #drawingCanvas {
+            border: 3px solid #764ba2;
+            border-radius: 10px;
+            cursor: crosshair;
+            display: block;
+            margin: 20px auto;
+            background: black;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CAPTCHA Challenge</h1>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Look at the CAPTCHA text displayed in the image below</li>
+                <li>Click "Start Drawing" to open the canvas</li>
+                <li>Write the CAPTCHA text on the black canvas</li>
+                <li>Click "Submit Answer" to validate your writing</li>
+            </ol>
+        </div>
+
+        <div class="captcha-container">
+            <h2>Your CAPTCHA:</h2>
+            <img src="data:image/png;base64,{{ captcha_image }}" alt="CAPTCHA" class="captcha-image">
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startDrawing()">Start Drawing</button>
+        </div>
+
+        <div id="canvasSection" class="canvas-section">
+            <h3 style="text-align: center; color: #764ba2;">Draw the CAPTCHA text here:</h3>
+            <canvas id="drawingCanvas" width="800" height="600"></canvas>
+            <div class="controls">
+                <button onclick="clearCanvas()">Clear</button>
+                <button onclick="submitAnswer()">Submit Answer</button>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let cursorEffectActive = false;
+
+        // Drawing settings
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        function startDrawing() {
+            const canvasSection = document.getElementById('canvasSection');
+            const startBtn = document.getElementById('startBtn');
+
+            canvasSection.classList.add('active');
+            startBtn.disabled = true;
+
+            // Start the cursor effect
+            fetch('/start_canvas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                cursorEffectActive = true;
+            })
+            .catch(error => {
+                console.error('Error starting cursor effect:', error);
+                showMessage('Cursor effect could not start, but you can continue drawing', 'info');
+            });
+        }
+
+        // Canvas drawing event listeners
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+
+            lastX = currentX;
+            lastY = currentY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            showMessage('Canvas cleared. Try again!', 'info');
+        }
+
+        function submitAnswer() {
+            // Stop cursor effect
+            if (cursorEffectActive) {
+                fetch('/stop_cursor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(() => {
+                    cursorEffectActive = false;
+                })
+                .catch(error => {
+                    console.error('Error stopping cursor:', error);
+                });
+            }
+
+            // Convert canvas to base64 image
+            const imageData = canvas.toDataURL('image/png');
+
+            showMessage('Validating your answer...', 'info');
+
+            // Send to server for validation
+            fetch('/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    image: imageData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success' && data.next_stage) {
+                    showMessage('Success! ' + data.message + ' Redirecting to final stage...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/final_stage';
+                    }, 2000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('An error occurred during validation. Please try again.', 'error');
+            });
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+
+            if (type !== 'info') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
