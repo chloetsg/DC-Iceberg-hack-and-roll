@@ -1,6 +1,5 @@
 import cv2
 from validator import StrictValidator  # Assuming you saved the class in validator.py
-from preprocess import smooth_jittery_text
 
 # 1. Initialize the validator
 # (This takes a few seconds to load the AI model)
