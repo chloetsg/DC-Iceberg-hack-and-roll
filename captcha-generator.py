@@ -1,3 +1,4 @@
+from turtle import width
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
 import string
@@ -34,21 +35,21 @@ def create_captcha(text):
                    "cour.ttf", "courbd.ttf",
                    "impact.ttf"]
 
-    sizes = [random.randint(25,40) for i in text]
+    sizes = [random.randint(*sorted([int(0.25*width), int(0.4*height)])) for i in text]
     shapes = ['arc', 'line']
 
     for i, char in enumerate(text):
         font = ImageFont.truetype(random.choice(valid_fonts), sizes[i]) #set font
         char_color = (random.randint(0, 240), random.randint(0, 240), random.randint(0, 240))
         # Random vertical jitter
-        draw.text((0 + i*random.randint(40,50), random.randint(0,100-sizes[i])), char, font=font, fill=char_color)
+        draw.text((0 + i*random.randint(40,50), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
 
     # Add some random "scribble" lines before the text
-    for _ in range(random.randint(15,30)):
+    for _ in range(random.randint(20,50)):
         shape = random.choice(shapes)
         if shape == 'line':
             points = [(random.randint(0, width), random.randint(0, height)) for _ in range(random.randint(2,10))]
-            draw.line(points, fill=(random.randint(0,255), random.randint(0,255), random.randint(0,255)), width=random.randint(1,5), joint="curve")
+            draw.line(points, fill=(random.randint(0,255), random.randint(0,255), random.randint(0,255)), width=random.randint(1,int(0.005*width)), joint="curve")
         elif shape == 'arc':
             # Define a random bounding box for the arc
             x1, y1 = random.randint(0, width), random.randint(0, height)
@@ -57,7 +58,7 @@ def create_captcha(text):
             start_angle = random.randint(0, 360)
             end_angle = random.randint(0, 360)            
             arc_color = (random.randint(100, 180), random.randint(100, 180), random.randint(100, 180))
-            draw.arc(points, start=start_angle, end=end_angle, fill=arc_color, width=3)
+            draw.arc(points, start=start_angle, end=end_angle, fill=arc_color, width=random.randint(1,int(0.005*width)))
 
     # Add random dots as noise
     for _ in range(int(0.005 * width * height)):
@@ -66,7 +67,7 @@ def create_captcha(text):
     return img
 
 # Usage
-valid_characters = "23456789abdefghijmnpqrtyABDEFGHJLMNPQRTY"
+valid_characters = "23456789abdefghijmnqrtyABDEFGHJLMNQRTY"
 captcha_text = ''.join(random.choices(valid_characters, k=5))
 print(captcha_text)
 image = create_captcha(captcha_text)
