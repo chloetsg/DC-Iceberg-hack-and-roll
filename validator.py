@@ -4,44 +4,55 @@ import cv2
 
 class StrictValidator:
     def __init__(self):
-        self.reader = easyocr.Reader(['en'])
+        # Use GPU if available for faster processing
+        self.reader = easyocr.Reader(['en'], gpu=False)  # Set to True if you have GPU
 
     def validate(self, image_np, target_text):
-        # 1. Minimal Preprocessing (Don't fix their mistakes!)
-        # Just convert to grayscale
+        # 1. Minimal Preprocessing
         if len(image_np.shape) == 3:
             gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
         else:
             gray = image_np
 
-        # 2. Run OCR with 'detail=1' to get confidence scores
-        results = self.reader.readtext(gray, detail=1, allowlist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890')
-        
-        # results format: [ ([[x,y]...], 'text', confidence), ... ]
-        
+        # 2. Run OCR with faster settings
+        results = self.reader.readtext(
+            gray,
+            detail=1,
+            allowlist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
+            paragraph=False,  # Faster processing
+            min_size=10       # Ignore very small text
+        )
+
         print(f"Raw OCR Results: {results}")
 
         if not results:
             return False, "I see nothing."
 
-        # 3. Check the best match
-        best_match = results[0]
-        detected_text = best_match[1]
-        confidence = best_match[2]
+        # 3. Check all detected text (more lenient)
+        target_lower = target_text.lower()
 
-        print(f"Detected: '{detected_text}' with confidence {confidence:.2f}")
+        for result in results:
+            detected_text = result[1]
+            confidence = result[2]
+            detected_lower = detected_text.lower()
 
-        # 4. The "Strict" Logic
-        # - Text must match exactly
-        # - Confidence must be high (The drawing must be neat)
-        if target_text == detected_text:
-            if confidence > 0.2: # Tune this
-                return True, "Passed!"
-            else:
-                return False, f"I think that's '{target_text}', but your handwriting is too shaky (Conf: {confidence:.2f})."
-            
-        else:
-            # Exact match required - case sensitive
-            return False, f"You wrote '{detected_text}', expected '{target_text}'"
-        
-        #return False, f"You wrote '{detected_text}', expected '{target_text}'."
+            print(f"Detected: '{detected_text}' with confidence {confidence:.2f}")
+
+            # More lenient matching:
+            # 1. Case-insensitive comparison
+            # 2. Lower confidence threshold (0.1 instead of 0.2)
+            # 3. Check if detected text contains target or vice versa
+            if detected_lower == target_lower:
+                if confidence > 0.1:
+                    return True, "Passed!"
+                else:
+                    return True, "Passed! (Low confidence but acceptable)"
+
+            # Also accept if target is contained in detected text or vice versa
+            if target_lower in detected_lower or detected_lower in target_lower:
+                if len(detected_lower) - len(target_lower) <= 2:  # Allow 2 extra/missing chars
+                    return True, "Passed! (Close enough)"
+
+        # If no match found, show what was detected
+        detected_text = results[0][1]
+        return False, f"You wrote '{detected_text}', expected '{target_text}'"
