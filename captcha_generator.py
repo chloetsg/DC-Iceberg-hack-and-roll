@@ -98,4 +98,4 @@ def generate_captcha():
     image, location = create_captcha(captcha_text)
     image.save("captcha.png")
 
-    return captcha_text, location
+    return captcha_text, location, image
