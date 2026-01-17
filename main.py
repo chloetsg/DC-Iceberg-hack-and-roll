@@ -72,11 +72,17 @@ class CaptchaApp:
         captcha_label.pack(pady=10)
 
         # Convert PIL image to PhotoImage
-        # Resize if too large
-        max_width = 800
-        if captcha_pil.width > max_width:
-            ratio = max_width / captcha_pil.width
-            new_size = (max_width, int(captcha_pil.height * ratio))
+        # Resize to fit within reasonable bounds - leave room for button
+        max_width = 700
+        max_height = 250  # Restrict height to ensure button is visible
+        
+        # Calculate ratio to fit both width and height constraints
+        width_ratio = max_width / captcha_pil.width if captcha_pil.width > max_width else 1
+        height_ratio = max_height / captcha_pil.height if captcha_pil.height > max_height else 1
+        ratio = min(width_ratio, height_ratio)
+        
+        if ratio < 1:
+            new_size = (int(captcha_pil.width * ratio), int(captcha_pil.height * ratio))
             captcha_pil = captcha_pil.resize(new_size, Image.Resampling.LANCZOS)
 
         self.captcha_photo = ImageTk.PhotoImage(captcha_pil)
@@ -89,7 +95,7 @@ class CaptchaApp:
                              font=("Arial", 14, "bold"), bg="#667eea", fg="white",
                              padx=30, pady=10, command=self.open_canvas,
                              relief=tk.RAISED, cursor="hand2")
-        start_btn.pack(pady=20)
+        start_btn.pack(pady=0)
 
     def open_canvas(self):
         """Open the drawing canvas and start cursor effect"""
@@ -107,7 +113,7 @@ class CaptchaApp:
         title.pack(pady=10)
 
         # Canvas for drawing
-        self.canvas = Canvas(main_frame, width=800, height=600,
+        self.canvas = Canvas(main_frame, width=700, height=400,
                             bg="black", cursor="crosshair",
                             relief=tk.SOLID, borderwidth=3)
         self.canvas.pack(pady=10)
