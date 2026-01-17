@@ -85,8 +85,28 @@
             });
 
             const result = await response.json();
-            alert(result.status === "SUCCESS" ? "Verified!" : "Try Again");
+            if (result.status == "SUCCESS") {
+                startGestureGame();
+            } else {
+                alert("Incorrect! Please try again.");
+            }
         }
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="gesture_game.js"></script>
+
+    <div id="gestureContainer" style="display:none; text-align:center; margin-top: 20px;">
+        <h2>Stage 3: Perform "The 67"</h2>
+        <p id="statusText" style="font-size: 24px; font-weight: bold; color: grey;">Loading Camera...</p>
+        
+        <div style="position: relative; width: 640px; height: 480px; margin: 0 auto;">
+            <video id="inputVideo" style="display:none;"></video>
+            <canvas id="outputCanvas" width="640" height="480" style="border: 2px solid #333;"></canvas>
+        </div>
+    </div>
 </body>
 </html>
