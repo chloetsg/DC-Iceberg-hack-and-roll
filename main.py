@@ -13,7 +13,7 @@ class CaptchaApp:
     def __init__(self, root):
         self.root = root
         self.root.title("CAPTCHA Challenge")
-        self.root.geometry("900x700")
+        self.root.geometry("1000x800")
         self.root.configure(bg="#667eea")
 
         # Variables
@@ -98,7 +98,7 @@ class CaptchaApp:
         start_btn.pack(pady=0)
 
     def open_canvas(self):
-        """Open the drawing canvas and start cursor effect"""
+        """Open the drawing canvas while keeping CAPTCHA visible"""
         # Clear window
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -107,13 +107,26 @@ class CaptchaApp:
         main_frame = tk.Frame(self.root, bg="white", padx=20, pady=20)
         main_frame.pack(expand=True, fill=tk.BOTH, padx=20, pady=20)
 
-        # Title
+        # Top section - CAPTCHA display
+        captcha_section = tk.Frame(main_frame, bg="white")
+        captcha_section.pack(pady=10)
+
+        captcha_title = tk.Label(captcha_section, text="Reference CAPTCHA:",
+                                font=("Arial", 14, "bold"), bg="white", fg="#764ba2")
+        captcha_title.pack()
+
+        # Display smaller version of CAPTCHA
+        captcha_img_label = tk.Label(captcha_section, image=self.captcha_photo,
+                                    bg="white", relief=tk.SOLID, borderwidth=2)
+        captcha_img_label.pack(pady=5)
+
+        # Drawing section
         title = tk.Label(main_frame, text="Draw the CAPTCHA text here:",
-                        font=("Arial", 18, "bold"), bg="white", fg="#764ba2")
-        title.pack(pady=10)
+                        font=("Arial", 16, "bold"), bg="white", fg="#764ba2")
+        title.pack(pady=5)
 
         # Canvas for drawing
-        self.canvas = Canvas(main_frame, width=700, height=400,
+        self.canvas = Canvas(main_frame, width=500, height=250,
                             bg="black", cursor="crosshair",
                             relief=tk.SOLID, borderwidth=3)
         self.canvas.pack(pady=10)
@@ -128,15 +141,15 @@ class CaptchaApp:
         btn_frame.pack(pady=15)
 
         clear_btn = tk.Button(btn_frame, text="Clear",
-                             font=("Arial", 12, "bold"), bg="#667eea", fg="white",
-                             padx=20, pady=8, command=self.clear_canvas,
-                             relief=tk.RAISED, cursor="hand2")
+                            font=("Arial", 12, "bold"), bg="#667eea", fg="white",
+                            padx=20, pady=8, command=self.clear_canvas,
+                            relief=tk.RAISED, cursor="hand2")
         clear_btn.pack(side=tk.LEFT, padx=10)
 
         submit_btn = tk.Button(btn_frame, text="Submit Answer",
-                              font=("Arial", 12, "bold"), bg="#764ba2", fg="white",
-                              padx=20, pady=8, command=self.submit_answer,
-                              relief=tk.RAISED, cursor="hand2")
+                            font=("Arial", 12, "bold"), bg="#764ba2", fg="white",
+                            padx=20, pady=8, command=self.submit_answer,
+                            relief=tk.RAISED, cursor="hand2")
         submit_btn.pack(side=tk.LEFT, padx=10)
 
         # Start teleporting cursor effect
@@ -286,7 +299,7 @@ class CaptchaApp:
 
         # Buttons frame
         btn_frame = tk.Frame(main_frame, bg="white")
-        btn_frame.pack(pady=20)
+        btn_frame.pack(pady=10)
 
         start_btn = tk.Button(btn_frame, text="Start Final Challenge",
                              font=("Arial", 14, "bold"), bg="#f5576c", fg="white",
