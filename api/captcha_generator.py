@@ -35,7 +35,9 @@ def read_bg(folder_path):
 
     bg_path = os.path.join(folder_path, random.choice(files))
     bg_image = Image.open(bg_path).convert('RGB')
+    print(bg_path)
     location = bg_path.split("\\")[-1].split(".")[0]
+    print(location)
 
     return bg_image, bg_image.width, bg_image.height, loc_dict[location]
 
@@ -99,3 +101,5 @@ def generate_captcha():
     #image.save("captcha.png")
 
     return captcha_text, location, image
+
+generate_captcha()
