@@ -35,9 +35,7 @@ def read_bg(folder_path):
 
     bg_path = os.path.join(folder_path, random.choice(files))
     bg_image = Image.open(bg_path).convert('RGB')
-    print(bg_path)
-    location = bg_path.split("\\")[-1].split(".")[0]
-    print(location)
+    location = bg_path.split("/")[-1].split(".")[0]
 
     return bg_image, bg_image.width, bg_image.height, loc_dict[location]
 
