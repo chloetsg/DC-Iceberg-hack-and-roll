@@ -6,9 +6,33 @@ import io
 from flask import Flask, jsonify, request, session
 import base64
 import os
+import requests
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "DC_Iceberg")
+
+def ocr_verify(image_path, api_key):
+    with open(image_path, "rb") as f:
+        payload = {
+            'apikey': api_key,
+            'language': 'eng',
+            'isOverlayRequired': False,
+            'FileType': 'PNG',
+        }
+        files = {'file': f}
+        
+        response = requests.post(
+            'https://api.ocr.space/parse/image',
+            files=files,
+            data=payload
+        )
+        
+    result = response.json()
+    
+    # Extract the text from the result
+    if result.get('ParsedResults'):
+        return result['ParsedResults'][0]['ParsedText'].strip()
+    return ""
 
 @app.route('/api/get_captcha', methods=['GET'])
 def get_captcha():
@@ -39,9 +63,10 @@ def verify():
     img.save(temp_path)
 
     # 2. Run your existing validation logic
-    is_valid = validate_writing(temp_path, captcha_text)
+    detected_text = ocr_verify("/tmp/my_drawing.png", "K87453151788957")
+    #is_valid = validate_writing(temp_path, captcha_text)
 
-    if is_valid:
+    if detected_text.lower() == captcha_text.lower():
         return jsonify({"status": "SUCCESS"})
     else:
         return jsonify({"status": "FAIL"})
