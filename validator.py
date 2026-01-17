@@ -15,7 +15,7 @@ class StrictValidator:
             gray = image_np
 
         # 2. Run OCR with 'detail=1' to get confidence scores
-        results = self.reader.readtext(gray, detail=1, allowlist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+        results = self.reader.readtext(gray, detail=1, allowlist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890')
         
         # results format: [ ([[x,y]...], 'text', confidence), ... ]
         
