@@ -36,11 +36,13 @@
 
         startBtn.onclick = async function() {
             // 1. Request the image from your Python function
-            const response = await fetch('/api/get_captcha');
+            try {
+                const response = await fetch('/api/get-captcha');
             
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
             }
+
             const data = await response.json();
 
             // 2. Insert the Base64 string into the image tag
@@ -48,6 +50,10 @@
 
             // 3. Show the popup
             modal.style.display = "block";
+            } catch (error) {
+                console.error("Failed to load captcha:", error);
+                alert("System error: Could not load captcha.");
+            }   
         }
 
         function closeModal() {
