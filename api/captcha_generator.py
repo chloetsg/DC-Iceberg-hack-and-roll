@@ -41,7 +41,8 @@ def read_bg(folder_path):
 
 def create_captcha(text):
     # Create a blank image
-    img, width, height, location = read_bg("./mall-images")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    img, width, height, location = read_bg(os.path.join(base_dir, "mall-images"))
     draw = ImageDraw.Draw(img)
     
     valid_fonts = ["arialbd.ttf", "ariblk.ttf", 
@@ -95,6 +96,6 @@ def generate_captcha():
     captcha_text = ''.join(random.choices(valid_characters, k=5))
 
     image, location = create_captcha(captcha_text)
-    image.save("captcha.png")
+    #image.save("captcha.png")
 
     return captcha_text, location, image
