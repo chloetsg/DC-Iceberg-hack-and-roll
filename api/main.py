@@ -1,17 +1,21 @@
 from api.reco_main import validate_writing
 from api.video import perform_67
 import api.captcha_generator as captcha_generator
-import api.canvas as canvas
+from PIL import Image
 import io
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 import base64
+import os
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", "DC_Iceberg")
 
 @app.route('/api/get_captcha', methods=['GET'])
 def get_captcha():
     # create captcha here
     captcha_text, location, image = captcha_generator.generate_captcha()
+    session['captcha_text'] = captcha_text
+    session['location'] = location
 
     # display captcha.png
     buffer = io.BytesIO()
@@ -19,12 +23,11 @@ def get_captcha():
     byte_im= buffer.getvalue()
 
     return jsonify({"image": base64.b64encode(byte_im).decode('utf-8')})
-    # run canvas.py, receive submitted handwriting image as "my_drawing.png"
+
 @app.route('/api/verify', methods=['POST'])
 def verify():
-    data = request.json
-    encoded_data = data.get('drawing').split(',')[1] # Remove the "data:image/png;base64," part
-    captcha_text = data.get('text')
+    captcha_text = session.get('captcha_text')
+    encoded_data = request.json.get('drawing').split(',')[1]
 
     # 1. Convert Base64 string back to an image file for your validator
     img_bytes = base64.b64decode(encoded_data)
@@ -36,7 +39,6 @@ def verify():
     img.save(temp_path)
 
     # 2. Run your existing validation logic
-    from reco_main import validate_writing
     is_valid = validate_writing(temp_path, captcha_text)
 
     if is_valid:

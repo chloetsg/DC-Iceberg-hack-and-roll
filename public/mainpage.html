@@ -69,10 +69,6 @@
             ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
         }
 
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
         // --- Sending to Python ---
         async function submitDrawing() {
             // 1. Convert canvas to Base64
