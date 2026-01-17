@@ -1,2 +1,7 @@
-# DC-Iceberg-Hack-Roll
+# DC-Iceberg-Hack-n-Roll
 data centers were the cause of global warming
+
+This version of CAPTCHA hell consists of 3 parts:
+1. Geoguessr - guess which is the nearest mrt to the mall in the background image
+2. CAPTCHA - try to handwrite the captcha message in the image...but with a surprise!
+3. 67676767
