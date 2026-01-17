@@ -1,63 +1,45 @@
 import cv2
 import mediapipe as mp
-import numpy as np
-from collections import deque
 import time
 
-
 # --- Configuration ---
-Identify_Action = "67676767676767676767676767"
-FLAG = False
-HISTORY_LENGTH = 30  # How many frames to keep for calculating average position (approx 1 sec at 30fps)
-MOVEMENT_THRESHOLD = 0.03 # Normalized height (0.0-1.0). How far they must move from center to count as a bob.
-DEBOUNCE_SECONDS = 1.5  # Time to wait after detection before detecting again
+SWAP_THRESHOLD = 0.05
+RESET_TIME = 1.0
+SUCCESS_DISPLAY_DURATION = 3.0  # Seconds to keep showing text after success
 
-# --- Initialization ---
+# --- Validation Thresholds ---
+FLATNESS_TOLERANCE = 1
+
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-# Use models optimized for accuracy since we need precise multi-hand tracking
-hands = mp_hands.Hands(
-    max_num_hands=2,
-    model_complexity=1,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.7
-)
+hands = mp_hands.Hands(max_num_hands=2, min_detection_confidence=0.7)
 
-# Motion history buffers
-y_history = deque(maxlen=HISTORY_LENGTH)
+# State Variables
+last_state = "NEUTRAL"
+cycle_count = 0
+last_move_time = time.time()
+success_trigger_time = None  # ### NEW: Tracks when success happened
 
-# State machine flags
-went_up = False
-went_down = False
-last_detection_time = 0
+# --- Validator Function ---
+def is_valid_hand(landmarks, label):
+    # (Same as your existing function)
+    idx_mcp_y = landmarks.landmark[5].y
+    pinky_mcp_y = landmarks.landmark[17].y
+    
+    if abs(idx_mcp_y - pinky_mcp_y) > FLATNESS_TOLERANCE:
+        return False, "Keep Hand Flat!"
 
-# Helper to get average Y of both wrists
-def get_avg_wrist_y(multi_hand_landmarks, multi_handedness):
-    wrist_ys = []
-    left_hand_present = False
-    right_hand_present = False
-
-    for idx, hand_landmarks in enumerate(multi_hand_landmarks):
-        # Get handedness label (Left/Right)
-        label = multi_handedness[idx].classification[0].label
-        
-        # Landmark 0 is the wrist
-        wrist = hand_landmarks.landmark[0]
-        
-        # Basic sanity check: Left hand should be on left side of screen (x < 0.5)
-        # Remember: Image is mirrored later, so Left hand looks like it's on the Left.
-        if label == "Left" and wrist.x < 0.6:
-            left_hand_present = True
-            wrist_ys.append(wrist.y)
-        elif label == "Right" and wrist.x > 0.4:
-            right_hand_present = True
-            wrist_ys.append(wrist.y)
-
-    # Only proceed if we have one distinct left and one distinct right hand
-    if left_hand_present and right_hand_present and len(wrist_ys) == 2:
-        return np.mean(wrist_ys)
-    return None
+    thumb_tip_x = landmarks.landmark[4].x
+    pinky_tip_x = landmarks.landmark[20].x
+    
+    if label == "Left":
+        if thumb_tip_x > pinky_tip_x: 
+            return False, "Rotate Palm Up"
+    else:
+        if thumb_tip_x < pinky_tip_x:
+            return False, "Rotate Palm Up"
+    return True, "OK"
 
 # --- Main Loop ---
 cap = cv2.VideoCapture(0)
@@ -66,92 +48,98 @@ while cap.isOpened():
     success, image = cap.read()
     if not success: continue
 
-    # Flip for selfie mirror view
     image = cv2.flip(image, 1)
     H, W, _ = image.shape
     
-    # Convert to RGB for MediaPipe
+    # ### NEW: Logic Branching
+    # If we already succeeded, just show the success screen and count down
+    if success_trigger_time is not None:
+        elapsed = time.time() - success_trigger_time
+        
+        # 1. Check if time is up
+        if elapsed > SUCCESS_DISPLAY_DURATION:
+            print("Finished Success Display. Exiting...")
+            break
+        
+        # 2. If not up, just display the static success text
+        remaining = int(SUCCESS_DISPLAY_DURATION - elapsed) + 1
+        cv2.putText(image, "67 ACTIVATED!", (50, H // 2), 
+                   cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 5)
+        cv2.putText(image, f"Closing in {remaining}...", (50, H // 2 + 60), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        
+        cv2.imshow('Flat Hand Detector', image)
+        if cv2.waitKey(5) & 0xFF == 27: break
+        continue # Skip the rest of the loop (detection logic)
+
+    # --- NORMAL DETECTION LOGIC (Only runs if success_trigger_time is None) ---
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = hands.process(image_rgb)
-
-    current_status_text = "Searching for 2 hands..."
-    status_color = (100, 100, 100) # Grey
-
+    
+    status_text = "Show 2 Hands"
+    status_color = (100, 100, 100)
+    
     if results.multi_hand_landmarks and len(results.multi_hand_landmarks) == 2:
-        # Draw landmarks
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        valid_hands_count = 0
+        
+        for idx, hl in enumerate(results.multi_hand_landmarks):
+            lbl = results.multi_handedness[idx].classification[0].label
+            is_good, msg = is_valid_hand(hl, lbl)
             
-        # 1. Get combined Y position of wrists
-        avg_y = get_avg_wrist_y(results.multi_hand_landmarks, results.multi_handedness)
+            if is_good:
+                valid_hands_count += 1
+                mp_drawing.draw_landmarks(image, hl, mp_hands.HAND_CONNECTIONS)
+            else:
+                color = (0, 0, 255)
+                wrist = hl.landmark[0]
+                cx, cy = int(wrist.x * W), int(wrist.y * H)
+                cv2.putText(image, msg, (cx - 40, cy + 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                mp_drawing.draw_landmarks(image, hl, mp_hands.HAND_CONNECTIONS, 
+                                          mp_drawing.DrawingSpec(color=color))
 
-        if avg_y is not None:
-            current_status_text = "Tracking motion..."
-            status_color = (0, 255, 255) # Yellow
-            y_history.append(avg_y)
+        if valid_hands_count == 2:
+            left_w, right_w = None, None
+            for idx, hl in enumerate(results.multi_hand_landmarks):
+                lbl = results.multi_handedness[idx].classification[0].label
+                if lbl == "Left": left_w = hl.landmark[0]
+                else: right_w = hl.landmark[0]
+            
+            if left_w and right_w:
+                mid = (left_w.y + right_w.y) / 2
+                l_up = left_w.y < (mid - SWAP_THRESHOLD)
+                r_up = right_w.y < (mid - SWAP_THRESHOLD)
+                l_down = left_w.y > (mid + SWAP_THRESHOLD)
+                r_down = right_w.y > (mid + SWAP_THRESHOLD)
 
-            # Only analyze if we have enough history to establish a baseline
-            if len(y_history) == HISTORY_LENGTH:
-                # Calculate running average (baseline position)
-                baseline_y = np.mean(y_history)
+                curr = "NEUTRAL"
+                if l_up and r_down: curr = "LEFT_UP"
+                elif r_up and l_down: curr = "RIGHT_UP"
+
+                if curr != "NEUTRAL" and curr != last_state:
+                    cycle_count += 1
+                    last_move_time = time.time()
+                    last_state = curr
+
+                if time.time() - last_move_time > RESET_TIME:
+                    cycle_count = 0
+                    last_state = "NEUTRAL"
+
+                status_text = f"Reps: {cycle_count}"
+                status_color = (255, 255, 0)
                 
-                # Remember: Y increases DOWNWARD in screen coordinates.
-                # Moving UP means current Y is SMALLER than baseline.
-                # Moving DOWN means current Y is LARGER than baseline.
+                # ### NEW: Trigger Success Mode
+                if cycle_count >= 2:
+                    success_trigger_time = time.time() # Start the timer
+                    print("67 DETECTED - Starting Cooldown")
+                    # No break here! The next loop iteration will catch the success_trigger_time
+        else:
+            status_text = "Fix Hand Position!"
+            status_color = (0, 0, 255)
 
-                # Check UP movement
-                if avg_y < (baseline_y - MOVEMENT_THRESHOLD):
-                    went_up = True
-                    # Reset 'down' flag if we go up, to ensure it's a consecutive cycle
-                    if not went_down: went_down = False 
-
-                # Check DOWN movement
-                elif avg_y > (baseline_y + MOVEMENT_THRESHOLD):
-                    went_down = True
-                     # Reset 'up' flag if we go down first
-                    if not went_up: went_up = False
-
-                # Check for Action Trigger (Up AND Down occurred recently)
-                if went_up and went_down:
-                    current_time = time.time()
-                    # Debounce check to prevent spamming detections
-                    if (current_time - last_detection_time) > DEBOUNCE_SECONDS:
-                        print(f"\nACTION DETECTED: {Identify_Action}!\n")
-                        # Visual Feedback Trigger
-                        cv2.rectangle(image, (0, 0), (W, H), (0, 255, 0), 20)
-                        last_detection_time = current_time
-                        # Reset flags
-                        went_up = False
-                        went_down = False
-                        y_history.clear() # Clear history to restart baseline
-
-                        FLAG = True
-
-                        break
-
-    # Status display
-    # Draw baseline region if tracking
-    if len(y_history) == HISTORY_LENGTH:
-        base_y_pix = int(np.mean(y_history) * H)
-        thresh_pix = int(MOVEMENT_THRESHOLD * H)
-        # Draw a semi-transparent band showing the "neutral" zone
-        overlay = image.copy()
-        cv2.rectangle(overlay, (0, base_y_pix - thresh_pix), (W, base_y_pix + thresh_pix), (255, 255, 0), -1)
-        cv2.addWeighted(overlay, 0.3, image, 0.7, 0, image)
-        cv2.line(image, (0, base_y_pix), (W, base_y_pix), (255, 0, 0), 2)
-
-    # Show Trigger Status if recently detected
-    if (time.time() - last_detection_time) < 1.0:
-         cv2.putText(image, Identify_Action, (50, H // 2), 
-                    cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 5)
-    else:
-         cv2.putText(image, current_status_text, (20, 50), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, status_color, 2)
-
-
-    cv2.imshow('Meme Gesture Detector', image)
+    cv2.putText(image, status_text, (20, 60), cv2.FONT_HERSHEY_PLAIN, 1.5, status_color, 3)
+    cv2.imshow('Flat Hand Detector', image)
     if cv2.waitKey(5) & 0xFF == 27: break
 
 cap.release()
 cv2.destroyAllWindows()
-print("DONE!!!")
