@@ -1,3 +1,5 @@
+<img width="2557" height="1503" alt="image" src="https://github.com/user-attachments/assets/b399729d-2895-449f-9f70-ab1690a47e6b" />
+
 # DC-Iceberg-Hack-n-Roll
 data centers were the cause of global warming
 
