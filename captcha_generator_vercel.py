@@ -22,23 +22,24 @@ def create_captcha(text):
                    "verdanab.ttf", "verdana.ttf",
                    "times.ttf", "timesbd.ttf"]
 
-    sizes = [random.randint(*sorted([int(0.25*width), int(0.4*height)])) for i in text]
-    shapes = ['arc', 'line']
+    # Use consistent, readable size for all characters
+    font_size = 50
 
     # Calculate proper spacing to avoid overlap
-    x_position = 20  # Start with some margin from the left
+    x_position = 30  # Start with some margin from the left
 
     for i, char in enumerate(text):
         try:
-            font = ImageFont.truetype(random.choice(valid_fonts), sizes[i])
+            font = ImageFont.truetype(random.choice(valid_fonts), font_size)
         except:
             # Fallback to default font if custom fonts not available
             font = ImageFont.load_default()
 
-        char_color = (random.randint(0, 240), random.randint(0, 240), random.randint(0, 240))
+        # Use darker, more visible colors
+        char_color = (random.randint(0, 100), random.randint(0, 100), random.randint(0, 100))
 
-        # Random vertical jitter
-        y_position = random.randint(0, height - sizes[i])
+        # Centered vertical position with slight jitter
+        y_position = (height - font_size) // 2 + random.randint(-10, 10)
 
         # Draw the character
         draw.text((x_position, y_position), char, font=font, fill=char_color)
@@ -48,28 +49,14 @@ def create_captcha(text):
             char_bbox = draw.textbbox((x_position, y_position), char, font=font)
             char_width = char_bbox[2] - char_bbox[0]
         except:
-            char_width = sizes[i] // 2
+            char_width = font_size // 2
 
-        x_position += char_width + random.randint(5, 15)
+        x_position += char_width + random.randint(10, 20)
 
-    # Add some random "scribble" lines
-    for _ in range(random.randint(5,10)):
-        shape = random.choice(shapes)
-        if shape == 'line':
-            points = [(random.randint(0, width), random.randint(0, height)) for _ in range(random.randint(2,10))]
-            draw.line(points, fill=(random.randint(0,255), random.randint(0,255), random.randint(0,255)), width=random.randint(1,int(0.005*width)), joint="curve")
-        elif shape == 'arc':
-            x1, y1 = random.randint(0, width), random.randint(0, height)
-            x2, y2 = random.randint(x1, width), random.randint(y1, height)
-            points = [x1, y1, x2, y2]
-            start_angle = random.randint(0, 360)
-            end_angle = random.randint(0, 360)
-            arc_color = (random.randint(100, 180), random.randint(100, 180), random.randint(100, 180))
-            draw.arc(points, start=start_angle, end=end_angle, fill=arc_color, width=random.randint(1,int(0.005*width)))
-
-    # Add random dots as noise
-    for _ in range(int(0.005 * width * height)):
-        draw.point((random.randint(0, width), random.randint(0, height)), fill=(0, 0, 0))
+    # Add minimal noise - just a few light lines
+    for _ in range(3):
+        points = [(random.randint(0, width), random.randint(0, height)) for _ in range(2)]
+        draw.line(points, fill=(200, 200, 200), width=1)
 
     return img
 
