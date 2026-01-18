@@ -184,7 +184,7 @@ h3 {
 }
 
 #video-canvas {
-    display: block;
+    display: none !important; /* Hide canvas - no video display needed */
     margin: 20px auto;
     background: black;
     border: 3px solid #667eea;
