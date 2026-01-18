@@ -253,12 +253,16 @@ function startVideoChallenge() {
 
     closeModal();
 
-    // Initialize MediaPipe Hands
-    initializeHandDetection();
+    // Wait a bit for MediaPipe libraries to load, then initialize
+    setTimeout(() => {
+        initializeHandDetection();
+    }, 500);
 }
 
 async function initializeHandDetection() {
     console.log('Initializing hand detection...');
+    console.log('Checking for MediaPipe libraries...');
+    console.log('Hands available:', typeof Hands !== 'undefined');
 
     const videoElement = document.getElementById('video-feed');
     const canvasElement = document.getElementById('video-canvas');
@@ -269,32 +273,37 @@ async function initializeHandDetection() {
     canvasElement.height = 480;
 
     // Check if MediaPipe is loaded
-    if (typeof Hands === 'undefined') {
+    if (typeof Hands === 'undefined' || typeof window.Hands === 'undefined') {
         console.error('MediaPipe Hands not loaded!');
-        showModal('Error', 'Failed to load hand detection library. Please refresh the page.');
+        console.error('Available objects:', Object.keys(window));
+        showModal('Error', 'Hand detection library failed to load. Please refresh the page and try again.');
         return;
     }
 
-    // Initialize MediaPipe Hands
-    hands = new Hands({
-        locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }
-    });
-
-    hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.5
-    });
-
-    hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
-
-    console.log('Requesting camera access...');
-
-    // Use native browser camera access instead of MediaPipe Camera utility
     try {
+        console.log('Creating Hands instance...');
+        // Initialize MediaPipe Hands
+        hands = new Hands({
+            locateFile: (file) => {
+                const path = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                console.log('Loading MediaPipe file:', path);
+                return path;
+            }
+        });
+
+        console.log('Setting Hands options...');
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
+
+        console.log('Requesting camera access...');
+
+        // Use native browser camera access
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 width: 640,
@@ -310,7 +319,11 @@ async function initializeHandDetection() {
         // Send frames to MediaPipe Hands
         const sendFrame = async () => {
             if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-                await hands.send({image: videoElement});
+                try {
+                    await hands.send({image: videoElement});
+                } catch (e) {
+                    console.error('Error sending frame to MediaPipe:', e);
+                }
             }
             requestAnimationFrame(sendFrame);
         };
@@ -321,8 +334,8 @@ async function initializeHandDetection() {
         };
 
     } catch (err) {
-        console.error('Camera error:', err);
-        showModal('Error', `Failed to access camera: ${err.message}. Please allow camera permissions and refresh.`);
+        console.error('Initialization error:', err);
+        showModal('Error', `Failed to initialize: ${err.message}. Please refresh and try again.`);
     }
 }
 
