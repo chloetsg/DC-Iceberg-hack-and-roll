@@ -1,0 +1,305 @@
+/* styles.css - Styling for CAPTCHA Challenge Extension */
+/* Matches the original Python tkinter styling */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-width: 600px;
+  min-height: 500px;
+  padding: 20px;
+}
+
+#app-container {
+  width: 100%;
+  height: 100%;
+}
+
+.loading {
+  color: white;
+  font-size: 18px;
+  text-align: center;
+  padding: 50px;
+}
+
+/* Main Frame */
+.main-frame {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Title */
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Instructions Frame */
+.instructions-frame {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.instructions-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 10px;
+}
+
+.instructions-frame p {
+  font-size: 13px;
+  color: #333;
+  margin: 5px 0;
+  line-height: 1.5;
+}
+
+/* CAPTCHA Display */
+.captcha-label {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin: 15px 0 10px;
+}
+
+.captcha-display {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.captcha-image {
+  border: 3px solid #333;
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+.captcha-image-small {
+  border: 2px solid #333;
+  border-radius: 4px;
+  max-width: 300px;
+}
+
+/* Canvas Section */
+.captcha-section {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.reference-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #764ba2;
+  margin-bottom: 10px;
+}
+
+.draw-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #764ba2;
+  text-align: center;
+  margin: 10px 0;
+}
+
+#drawing-canvas {
+  display: block;
+  margin: 0 auto 20px;
+  border: 3px solid #333;
+  border-radius: 4px;
+  cursor: crosshair;
+  background: black;
+  touch-action: none; /* Prevent scrolling on touch */
+}
+
+/* Buttons */
+.btn {
+  font-size: 14px;
+  font-weight: bold;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+}
+
+.btn-secondary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6fd6;
+}
+
+.button-frame {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+/* Center the start button */
+#start-btn {
+  display: block;
+  margin: 20px auto 0;
+}
+
+/* Challenge 67 Screen */
+.challenge-67 {
+  text-align: center;
+  padding: 50px 30px;
+}
+
+.challenge-67 h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.challenge-67 p {
+  font-size: 18px;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.challenge-67 .hint {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+}
+
+.challenge-67 .btn {
+  margin: 10px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  min-width: 300px;
+  max-width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 15px 20px;
+  color: white;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-body p {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  padding: 15px 20px;
+  text-align: right;
+  border-top: 1px solid #eee;
+}
+
+.modal-close {
+  padding: 8px 25px;
+  font-size: 13px;
+}
+
+/* Cursor Effect Overlay */
+#cursor-effect {
+  transition: all 0.1s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+  body {
+    min-width: 100%;
+    padding: 10px;
+  }
+
+  .main-frame {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  #drawing-canvas {
+    width: 100%;
+    height: 200px;
+  }
+
+  .button-frame {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
