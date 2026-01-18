@@ -242,19 +242,30 @@ let cycleCount = 0;
 let lastMoveTime = Date.now();
 let successTriggerTime = null;
 
-const SWAP_THRESHOLD = 0.05;
-const RESET_TIME = 1000; // 1 second
+const SWAP_THRESHOLD = 0.03;  // More sensitive - was 0.05 (smaller = easier to trigger)
+const RESET_TIME = 2000; // 2 seconds - more time to complete gesture
 const SUCCESS_DISPLAY_DURATION = 3000; // 3 seconds
 
 function startVideoChallenge() {
+    console.log('=== STARTING VIDEO CHALLENGE ===');
+
     // Hide canvas screen, show video screen
     document.getElementById('canvas-screen').style.display = 'none';
     document.getElementById('video-screen').style.display = 'block';
 
     closeModal();
 
+    // Reset state variables
+    lastState = "NEUTRAL";
+    cycleCount = 0;
+    lastMoveTime = Date.now();
+    successTriggerTime = null;
+
+    console.log('Video challenge UI ready, waiting for MediaPipe to load...');
+
     // Wait a bit for MediaPipe libraries to load, then initialize
     setTimeout(() => {
+        console.log('Attempting to initialize hand detection...');
         initializeHandDetection();
     }, 500);
 }
@@ -262,7 +273,7 @@ function startVideoChallenge() {
 async function initializeHandDetection() {
     console.log('Initializing hand detection...');
     console.log('Checking for MediaPipe libraries...');
-    console.log('Hands available:', typeof Hands !== 'undefined');
+    console.log('window.Hands available:', typeof window.Hands !== 'undefined');
 
     const videoElement = document.getElementById('video-feed');
     const canvasElement = document.getElementById('video-canvas');
@@ -273,37 +284,17 @@ async function initializeHandDetection() {
     canvasElement.height = 480;
 
     // Check if MediaPipe is loaded
-    if (typeof Hands === 'undefined' || typeof window.Hands === 'undefined') {
+    if (typeof window.Hands === 'undefined') {
         console.error('MediaPipe Hands not loaded!');
-        console.error('Available objects:', Object.keys(window));
+        console.error('window object keys:', Object.keys(window).filter(k => k.toLowerCase().includes('hand') || k.toLowerCase().includes('media')));
         showModal('Error', 'Hand detection library failed to load. Please refresh the page and try again.');
         return;
     }
 
     try {
-        console.log('Creating Hands instance...');
-        // Initialize MediaPipe Hands
-        hands = new Hands({
-            locateFile: (file) => {
-                const path = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-                console.log('Loading MediaPipe file:', path);
-                return path;
-            }
-        });
+        console.log('Requesting camera access first...');
 
-        console.log('Setting Hands options...');
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
-
-        console.log('Requesting camera access...');
-
-        // Use native browser camera access
+        // Request camera access FIRST
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 width: 640,
@@ -316,6 +307,37 @@ async function initializeHandDetection() {
         videoStream = stream;
         videoElement.srcObject = stream;
 
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+            videoElement.onloadedmetadata = () => {
+                videoElement.play();
+                console.log('Video playing');
+                resolve();
+            };
+        });
+
+        console.log('Creating Hands instance...');
+        // Initialize MediaPipe Hands - use window.Hands explicitly
+        hands = new window.Hands({
+            locateFile: (file) => {
+                const path = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                console.log('Loading MediaPipe file:', path);
+                return path;
+            }
+        });
+
+        console.log('Setting Hands options...');
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.3,  // More lenient - was 0.5
+            minTrackingConfidence: 0.3    // More lenient - was 0.5
+        });
+
+        console.log('Setting onResults callback...');
+        hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
+
+        console.log('Starting frame processing...');
         // Send frames to MediaPipe Hands
         const sendFrame = async () => {
             if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
@@ -328,27 +350,37 @@ async function initializeHandDetection() {
             requestAnimationFrame(sendFrame);
         };
 
-        videoElement.onloadedmetadata = () => {
-            console.log('Video metadata loaded, starting detection');
-            sendFrame();
-        };
+        sendFrame();
+        console.log('Hand detection fully initialized!');
 
     } catch (err) {
         console.error('Initialization error:', err);
-        showModal('Error', `Failed to initialize: ${err.message}. Please refresh and try again.`);
+        showModal('Error', `Failed to initialize: ${err.message}. Please check camera permissions and refresh.`);
     }
 }
 
 function onHandsResults(results, canvasCtx, canvasElement) {
-    if (!results || !results.image) {
-        console.error('No results or image from MediaPipe');
+    if (!results) {
+        console.error('No results from MediaPipe');
         return;
     }
 
-    // Log hand detection
-    if (results.multiHandLandmarks) {
-        console.log(`Detected ${results.multiHandLandmarks.length} hand(s)`);
+    // Clear canvas first
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+    // Draw the video frame to the canvas
+    if (results.image) {
+        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    } else {
+        console.warn('No image in results!');
     }
+
+    // Add debug info on canvas
+    canvasCtx.fillStyle = '#00FF00';
+    canvasCtx.font = 'bold 14px Arial';
+    const handCount = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+    canvasCtx.fillText(`Hands Detected: ${handCount}`, 10, 30);
 
     // If success has been triggered, show countdown
     if (successTriggerTime !== null) {
@@ -374,6 +406,11 @@ function onHandsResults(results, canvasCtx, canvasElement) {
     let statusText = 'Show 2 Hands';
     let statusColor = '#888';
 
+    // Log detection status occasionally
+    if (Math.random() < 0.1) {  // Log 10% of frames to avoid spam
+        console.log(`Frame: ${handCount} hand(s) detected`);
+    }
+
     if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
         let validHandsCount = 0;
         const handData = [];
@@ -384,12 +421,26 @@ function onHandsResults(results, canvasCtx, canvasElement) {
 
             const isValid = isValidHand(landmarks, handedness);
 
+            // Draw hand landmarks on canvas
             if (isValid.valid) {
                 validHandsCount++;
                 handData.push({
                     label: handedness,
                     wrist: landmarks[0]
                 });
+                // Draw valid hands in green
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+                drawLandmarks(canvasCtx, landmarks, {color: '#00FF00', radius: 4});
+            } else {
+                // Draw invalid hands in red
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#FF0000', lineWidth: 2});
+                drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', radius: 4});
+
+                // Draw error message near wrist
+                const wrist = landmarks[0];
+                canvasCtx.fillStyle = '#FF0000';
+                canvasCtx.font = '16px Arial';
+                canvasCtx.fillText(isValid.message, wrist.x * canvasElement.width - 40, wrist.y * canvasElement.height + 30);
             }
         }
 
@@ -437,6 +488,15 @@ function onHandsResults(results, canvasCtx, canvasElement) {
             statusText = 'Fix Hand Position!';
             statusColor = '#ff0000';
         }
+    } else if (results.multiHandLandmarks && results.multiHandLandmarks.length === 1) {
+        // Show feedback when only 1 hand detected
+        statusText = 'Show 2 Hands (1 detected)';
+        statusColor = '#ffaa00';
+
+        // Still draw the one hand we have
+        const landmarks = results.multiHandLandmarks[0];
+        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#FFAA00', lineWidth: 2});
+        drawLandmarks(canvasCtx, landmarks, {color: '#FFAA00', radius: 4});
     }
 
     // Update status display
@@ -444,10 +504,12 @@ function onHandsResults(results, canvasCtx, canvasElement) {
     document.getElementById('gesture-status').style.color = statusColor;
     document.getElementById('rep-count').textContent = `Reps: ${cycleCount}`;
     document.getElementById('rep-count').style.color = '#667eea';
+
+    canvasCtx.restore();
 }
 
 function isValidHand(landmarks, label) {
-    const FLATNESS_TOLERANCE = 0.1;
+    const FLATNESS_TOLERANCE = 0.25;  // Much more lenient - was 0.1
 
     // Check if hand is flat (index MCP and pinky MCP should be at similar y)
     const idxMcpY = landmarks[5].y;
@@ -457,20 +519,8 @@ function isValidHand(landmarks, label) {
         return {valid: false, message: 'Keep Hand Flat!'};
     }
 
-    // Check palm orientation (thumb and pinky tip positions)
-    const thumbTipX = landmarks[4].x;
-    const pinkyTipX = landmarks[20].x;
-
-    if (label === 'Left') {
-        if (thumbTipX > pinkyTipX) {
-            return {valid: false, message: 'Rotate Palm Up'};
-        }
-    } else {
-        if (thumbTipX < pinkyTipX) {
-            return {valid: false, message: 'Rotate Palm Up'};
-        }
-    }
-
+    // RELAXED: Skip palm orientation check - just accept any detected hand
+    // This makes it much easier to trigger the gesture
     return {valid: true, message: 'OK'};
 }
 

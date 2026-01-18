@@ -175,15 +175,22 @@ h3 {
 }
 
 .video-container {
-    display: none;
+    text-align: center;
+    margin: 20px 0;
 }
 
 #video-feed {
-    display: none;
+    display: none !important; /* Keep video element hidden */
 }
 
 #video-canvas {
-    display: none;
+    display: block;
+    margin: 20px auto;
+    background: black;
+    border: 3px solid #667eea;
+    border-radius: 10px;
+    max-width: 100%;
+    height: auto;
 }
 
 .status-display {
