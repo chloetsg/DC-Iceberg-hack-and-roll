@@ -26,6 +26,24 @@ loc_dict = {
     "white sands" : "pasir ris"
 }
 
+def get_random_font():
+    # Get the directory where THIS script (main.py) is located
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Point to your bundled fonts folder
+    fonts_dir = os.path.join(base_dir, "fonts")
+    
+    # List all available fonts in that folder
+    available_fonts = [f for f in os.listdir(fonts_dir) if f.endswith(('.ttf', '.otf'))]
+    
+    if not available_fonts:
+        # Fallback to a default PIL font if no files are found (though this is basic)
+        return ImageFont.load_default()
+    
+    # Pick a random font and load it
+    font_path = os.path.join(fonts_dir, random.choice(available_fonts))
+    return ImageFont.truetype(font_path)
+
 def read_bg(folder_path):
     valid_extensions = ('.jpg', '.jpeg')
     files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
@@ -44,7 +62,7 @@ def create_captcha(text):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     img, width, height, location = read_bg(os.path.join(base_dir, "mall-images"))
     draw = ImageDraw.Draw(img)
-    
+    """
     valid_fonts = ["arialbd.ttf", "ariblk.ttf", 
                    "calibri.ttf", "calibrib.ttf",
                    "segoeui.ttf", "segoeuib.ttf",
@@ -58,15 +76,16 @@ def create_captcha(text):
                    "consolab.ttf",
                    "cour.ttf", "courbd.ttf",
                    "impact.ttf"]
-
+    """
     sizes = [random.randint(*sorted([int(0.25*width), int(0.4*height)])) for i in text]
     shapes = ['arc', 'line']
 
     for i, char in enumerate(text):
-        font = ImageFont.truetype(random.choice(valid_fonts), sizes[i]) #set font
+        font = get_random_font()
+        # font = ImageFont.truetype(random.choice(valid_fonts), sizes[i]) #set font
         char_color = (random.randint(0, 240), random.randint(0, 240), random.randint(0, 240))
         # Random vertical jitter
-        draw.text((0 + i*random.randint(40,50), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
+        draw.text((0 + i*random.randint(sizes[i],sizes[i]+10), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
 
     # Add some random "scribble" lines before the text
     for _ in range(random.randint(20,50)):
