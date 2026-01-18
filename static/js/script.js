@@ -235,7 +235,8 @@ function closeModal() {
 
 // ==================== VIDEO CHALLENGE (67 HAND GESTURE) ====================
 
-let hands, camera;
+let hands;
+let videoStream = null;
 let lastState = "NEUTRAL";
 let cycleCount = 0;
 let lastMoveTime = Date.now();
@@ -256,7 +257,7 @@ function startVideoChallenge() {
     initializeHandDetection();
 }
 
-function initializeHandDetection() {
+async function initializeHandDetection() {
     console.log('Initializing hand detection...');
 
     const videoElement = document.getElementById('video-feed');
@@ -290,23 +291,39 @@ function initializeHandDetection() {
 
     hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
 
-    console.log('Starting camera...');
+    console.log('Requesting camera access...');
 
-    // Start camera
-    camera = new Camera(videoElement, {
-        onFrame: async () => {
-            await hands.send({image: videoElement});
-        },
-        width: 640,
-        height: 480
-    });
+    // Use native browser camera access instead of MediaPipe Camera utility
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: 640,
+                height: 480,
+                facingMode: 'user'
+            }
+        });
 
-    camera.start().then(() => {
-        console.log('Camera started successfully');
-    }).catch(err => {
+        console.log('Camera access granted');
+        videoStream = stream;
+        videoElement.srcObject = stream;
+
+        // Send frames to MediaPipe Hands
+        const sendFrame = async () => {
+            if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                await hands.send({image: videoElement});
+            }
+            requestAnimationFrame(sendFrame);
+        };
+
+        videoElement.onloadedmetadata = () => {
+            console.log('Video metadata loaded, starting detection');
+            sendFrame();
+        };
+
+    } catch (err) {
         console.error('Camera error:', err);
-        showModal('Error', 'Failed to access camera. Please allow camera permissions.');
-    });
+        showModal('Error', `Failed to access camera: ${err.message}. Please allow camera permissions and refresh.`);
+    }
 }
 
 function onHandsResults(results, canvasCtx, canvasElement) {
@@ -471,9 +488,10 @@ function isValidHand(landmarks, label) {
 }
 
 function completeChallenge() {
-    // Stop camera
-    if (camera) {
-        camera.stop();
+    // Stop camera stream
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
     }
 
     showModal('Success!', '67 Challenge Complete! You passed all tests!', () => {
