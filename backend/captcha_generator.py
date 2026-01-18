@@ -66,7 +66,7 @@ def create_captcha(text):
         font = ImageFont.truetype(random.choice(valid_fonts), sizes[i]) #set font
         char_color = (random.randint(0, 240), random.randint(0, 240), random.randint(0, 240))
         # Random vertical jitter
-        draw.text((0 + i*random.randint(40,50), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
+        draw.text((0 + i*random.randint(sizes[i],sizes[i]+10), random.randint(0,height-sizes[i])), char, font=font, fill=char_color)
 
     # Add some random "scribble" lines before the text
     for _ in range(random.randint(20,50)):
