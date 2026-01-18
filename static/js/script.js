@@ -242,9 +242,9 @@ let cycleCount = 0;
 let lastMoveTime = Date.now();
 let successTriggerTime = null;
 
-const SWAP_THRESHOLD = 0.03;  // More sensitive - was 0.05 (smaller = easier to trigger)
-const RESET_TIME = 2000; // 2 seconds - more time to complete gesture
-const SUCCESS_DISPLAY_DURATION = 3000; // 3 seconds
+const SWAP_THRESHOLD = 0.05;  // Hand position difference threshold (normalized 0-1)
+const RESET_TIME = 1000; // 1 second - reset cycle count if no movement
+const SUCCESS_DISPLAY_DURATION = 3000; // 3 seconds to display success message
 
 function startVideoChallenge() {
     console.log('=== STARTING VIDEO CHALLENGE ===');
@@ -330,8 +330,8 @@ async function initializeHandDetection() {
         hands.setOptions({
             maxNumHands: 2,
             modelComplexity: 1,
-            minDetectionConfidence: 0.3,  // More lenient - was 0.5
-            minTrackingConfidence: 0.3    // More lenient - was 0.5
+            minDetectionConfidence: 0.7,  // Higher confidence for better detection
+            minTrackingConfidence: 0.7    // Higher confidence for better tracking
         });
 
         console.log('Setting onResults callback...');
@@ -509,7 +509,7 @@ function onHandsResults(results, canvasCtx, canvasElement) {
 }
 
 function isValidHand(landmarks, label) {
-    const FLATNESS_TOLERANCE = 0.25;  // Much more lenient - was 0.1
+    const FLATNESS_TOLERANCE = 0.15;  // Adjusted for normalized coords (0-1 range)
 
     // Check if hand is flat (index MCP and pinky MCP should be at similar y)
     const idxMcpY = landmarks[5].y;
@@ -519,8 +519,22 @@ function isValidHand(landmarks, label) {
         return {valid: false, message: 'Keep Hand Flat!'};
     }
 
-    // RELAXED: Skip palm orientation check - just accept any detected hand
-    // This makes it much easier to trigger the gesture
+    // Check palm orientation (thumb and pinky tips)
+    const thumbTipX = landmarks[4].x;
+    const pinkyTipX = landmarks[20].x;
+
+    if (label === 'Left') {
+        // For left hand, thumb should be on the right side (greater x)
+        if (thumbTipX <= pinkyTipX) {
+            return {valid: false, message: 'Rotate Palm Up'};
+        }
+    } else {
+        // For right hand, thumb should be on the left side (smaller x)
+        if (thumbTipX >= pinkyTipX) {
+            return {valid: false, message: 'Rotate Palm Up'};
+        }
+    }
+
     return {valid: true, message: 'OK'};
 }
 
