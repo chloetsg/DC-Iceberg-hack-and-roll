@@ -234,20 +234,15 @@ function closeModal() {
 }
 
 // ==================== VIDEO CHALLENGE (67 HAND GESTURE) ====================
+// Using Python backend for hand detection
 
-let hands;
 let videoStream = null;
-let lastState = "NEUTRAL";
-let cycleCount = 0;
-let lastMoveTime = Date.now();
-let successTriggerTime = null;
-
-const SWAP_THRESHOLD = 0.05;  // Hand position difference threshold (normalized 0-1)
-const RESET_TIME = 1000; // 1 second - reset cycle count if no movement
-const SUCCESS_DISPLAY_DURATION = 3000; // 3 seconds to display success message
+let detectionInterval = null;
+let videoElement = null;
+let canvasElement = null;
 
 function startVideoChallenge() {
-    console.log('=== STARTING VIDEO CHALLENGE ===');
+    console.log('=== STARTING VIDEO CHALLENGE (Python Backend) ===');
 
     // Hide canvas screen, show video screen
     document.getElementById('canvas-screen').style.display = 'none';
@@ -255,46 +250,34 @@ function startVideoChallenge() {
 
     closeModal();
 
-    // Reset state variables
-    lastState = "NEUTRAL";
-    cycleCount = 0;
-    lastMoveTime = Date.now();
-    successTriggerTime = null;
-
-    console.log('Video challenge UI ready, waiting for MediaPipe to load...');
-
-    // Wait a bit for MediaPipe libraries to load, then initialize
-    setTimeout(() => {
-        console.log('Attempting to initialize hand detection...');
-        initializeHandDetection();
-    }, 500);
+    console.log('Initializing Python-based hand detection...');
+    initializeHandDetection();
 }
 
 async function initializeHandDetection() {
-    console.log('Initializing hand detection...');
-    console.log('Checking for MediaPipe libraries...');
-    console.log('window.Hands available:', typeof window.Hands !== 'undefined');
+    console.log('Initializing Python-based hand detection...');
 
-    const videoElement = document.getElementById('video-feed');
-    const canvasElement = document.getElementById('video-canvas');
-    const canvasCtx = canvasElement.getContext('2d');
-
-    // Set canvas size
-    canvasElement.width = 640;
-    canvasElement.height = 480;
-
-    // Check if MediaPipe is loaded
-    if (typeof window.Hands === 'undefined') {
-        console.error('MediaPipe Hands not loaded!');
-        console.error('window object keys:', Object.keys(window).filter(k => k.toLowerCase().includes('hand') || k.toLowerCase().includes('media')));
-        showModal('Error', 'Hand detection library failed to load. Please refresh the page and try again.');
-        return;
-    }
+    videoElement = document.getElementById('video-feed');
+    canvasElement = document.getElementById('video-canvas');
 
     try {
-        console.log('Requesting camera access first...');
+        // Start hand detection session on server
+        console.log('Starting hand detection session on server...');
+        const startResponse = await fetch('/api/start-hand-detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
 
-        // Request camera access FIRST
+        const startData = await startResponse.json();
+        if (!startData.success) {
+            throw new Error(startData.error);
+        }
+
+        console.log('Server-side hand detection started');
+
+        // Request camera access
+        console.log('Requesting camera access...');
         const stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 width: 640,
@@ -316,41 +299,41 @@ async function initializeHandDetection() {
             };
         });
 
-        console.log('Creating Hands instance...');
-        // Initialize MediaPipe Hands - use window.Hands explicitly
-        hands = new window.Hands({
-            locateFile: (file) => {
-                const path = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-                console.log('Loading MediaPipe file:', path);
-                return path;
-            }
-        });
+        // Create a hidden canvas to capture frames
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width = 640;
+        captureCanvas.height = 480;
+        const captureCtx = captureCanvas.getContext('2d');
 
-        console.log('Setting Hands options...');
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,  // Higher confidence for better detection
-            minTrackingConfidence: 0.7    // Higher confidence for better tracking
-        });
+        // Start sending frames to Python backend
+        console.log('Starting frame processing loop...');
+        detectionInterval = setInterval(async () => {
+            try {
+                // Capture current video frame
+                captureCtx.drawImage(videoElement, 0, 0, 640, 480);
+                const frameData = captureCanvas.toDataURL('image/jpeg', 0.8);
 
-        console.log('Setting onResults callback...');
-        hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
+                // Send to Python backend
+                const response = await fetch('/api/process-hand-frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        frame: frameData
+                    })
+                });
 
-        console.log('Starting frame processing...');
-        // Send frames to MediaPipe Hands
-        const sendFrame = async () => {
-            if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-                try {
-                    await hands.send({image: videoElement});
-                } catch (e) {
-                    console.error('Error sending frame to MediaPipe:', e);
+                const data = await response.json();
+                if (data.success) {
+                    updateHandDetectionUI(data.result);
+                } else {
+                    console.error('Frame processing error:', data.error);
                 }
+            } catch (err) {
+                console.error('Error in frame processing loop:', err);
             }
-            requestAnimationFrame(sendFrame);
-        };
+        }, 100); // Process 10 frames per second
 
-        sendFrame();
         console.log('Hand detection fully initialized!');
 
     } catch (err) {
@@ -359,234 +342,72 @@ async function initializeHandDetection() {
     }
 }
 
-function onHandsResults(results, canvasCtx, canvasElement) {
-    if (!results) {
-        console.error('No results from MediaPipe');
+function updateHandDetectionUI(result) {
+    // Update UI based on Python backend results
+    const statusElement = document.getElementById('gesture-status');
+    const repCountElement = document.getElementById('rep-count');
+
+    // Handle completion
+    if (result.completed) {
+        console.log('67 ACTIVATED! Challenge complete.');
+        completeChallenge();
         return;
     }
 
-    // Clear canvas first
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-    // Draw the video frame to the canvas
-    if (results.image) {
-        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-    } else {
-        console.warn('No image in results!');
-    }
-
-    // Add debug info on canvas
-    canvasCtx.fillStyle = '#00FF00';
-    canvasCtx.font = 'bold 14px Arial';
-    const handCount = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
-    canvasCtx.fillText(`Hands Detected: ${handCount}`, 10, 30);
-
-    // If success has been triggered, show countdown
-    if (successTriggerTime !== null) {
-        const elapsed = Date.now() - successTriggerTime;
-
-        if (elapsed > SUCCESS_DISPLAY_DURATION) {
-            console.log('67 ACTIVATED! Challenge complete.');
-            completeChallenge();
-            return;
-        }
-
-        const remaining = Math.floor((SUCCESS_DISPLAY_DURATION - elapsed) / 1000) + 1;
-
-        // Show success message in status display
-        document.getElementById('gesture-status').innerHTML = '<span class="success-message">67 ACTIVATED!</span>';
-        document.getElementById('rep-count').textContent = `Closing in ${remaining}...`;
-        document.getElementById('rep-count').style.color = '#00ff00';
-
+    // Handle countdown mode
+    if (result.countdown !== undefined) {
+        statusElement.innerHTML = '<span class="success-message">' + result.status + '</span>';
+        repCountElement.textContent = `Closing in ${result.countdown}...`;
+        repCountElement.style.color = '#00ff00';
         return;
     }
 
-    // Normal detection logic
-    let statusText = 'Show 2 Hands';
-    let statusColor = '#888';
+    // Normal status update
+    statusElement.textContent = result.status;
+    repCountElement.textContent = `Reps: ${result.cycle_count}`;
 
-    // Log detection status occasionally
-    if (Math.random() < 0.1) {  // Log 10% of frames to avoid spam
-        console.log(`Frame: ${handCount} hand(s) detected`);
+    // Set colors based on status
+    const colorMap = {
+        'gray': '#888888',
+        'yellow': '#ffff00',
+        'red': '#ff0000',
+        'green': '#00ff00',
+        'orange': '#ffaa00'
+    };
+    statusElement.style.color = colorMap[result.color] || '#888888';
+    repCountElement.style.color = '#667eea';
+
+    // Log progress occasionally
+    if (result.cycle_count > 0 && Math.random() < 0.2) {
+        console.log(`Hand detection: ${result.status}, Reps: ${result.cycle_count}`);
     }
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
-        let validHandsCount = 0;
-        const handData = [];
-
-        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-            const landmarks = results.multiHandLandmarks[i];
-            const handedness = results.multiHandedness[i].label;
-
-            const isValid = isValidHand(landmarks, handedness);
-
-            // Draw hand landmarks on canvas
-            if (isValid.valid) {
-                validHandsCount++;
-                handData.push({
-                    label: handedness,
-                    wrist: landmarks[0]
-                });
-                // Draw valid hands in green
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
-                drawLandmarks(canvasCtx, landmarks, {color: '#00FF00', radius: 4});
-            } else {
-                // Draw invalid hands in red
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#FF0000', lineWidth: 2});
-                drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', radius: 4});
-
-                // Draw error message near wrist
-                const wrist = landmarks[0];
-                canvasCtx.fillStyle = '#FF0000';
-                canvasCtx.font = '16px Arial';
-                canvasCtx.fillText(isValid.message, wrist.x * canvasElement.width - 40, wrist.y * canvasElement.height + 30);
-            }
-        }
-
-        if (validHandsCount === 2) {
-            // Both hands valid, check for alternating motion
-            let leftWrist = null;
-            let rightWrist = null;
-
-            for (const hand of handData) {
-                if (hand.label === 'Left') leftWrist = hand.wrist;
-                else rightWrist = hand.wrist;
-            }
-
-            if (leftWrist && rightWrist) {
-                const mid = (leftWrist.y + rightWrist.y) / 2;
-                const leftUp = leftWrist.y < (mid - SWAP_THRESHOLD);
-                const rightUp = rightWrist.y < (mid - SWAP_THRESHOLD);
-                const leftDown = leftWrist.y > (mid + SWAP_THRESHOLD);
-                const rightDown = rightWrist.y > (mid + SWAP_THRESHOLD);
-
-                let currentState = "NEUTRAL";
-                if (leftUp && rightDown) currentState = "LEFT_UP";
-                else if (rightUp && leftDown) currentState = "RIGHT_UP";
-
-                if (currentState !== "NEUTRAL" && currentState !== lastState) {
-                    cycleCount++;
-                    lastMoveTime = Date.now();
-                    lastState = currentState;
-                }
-
-                if (Date.now() - lastMoveTime > RESET_TIME) {
-                    cycleCount = 0;
-                    lastState = "NEUTRAL";
-                }
-
-                statusText = `Reps: ${cycleCount}`;
-                statusColor = '#ffff00';
-
-                if (cycleCount >= 2) {
-                    successTriggerTime = Date.now();
-                    console.log('67 DETECTED - Starting Cooldown');
-                }
-            }
-        } else {
-            statusText = 'Fix Hand Position!';
-            statusColor = '#ff0000';
-        }
-    } else if (results.multiHandLandmarks && results.multiHandLandmarks.length === 1) {
-        // Show feedback when only 1 hand detected
-        statusText = 'Show 2 Hands (1 detected)';
-        statusColor = '#ffaa00';
-
-        // Still draw the one hand we have
-        const landmarks = results.multiHandLandmarks[0];
-        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#FFAA00', lineWidth: 2});
-        drawLandmarks(canvasCtx, landmarks, {color: '#FFAA00', radius: 4});
-    }
-
-    // Update status display
-    document.getElementById('gesture-status').textContent = statusText;
-    document.getElementById('gesture-status').style.color = statusColor;
-    document.getElementById('rep-count').textContent = `Reps: ${cycleCount}`;
-    document.getElementById('rep-count').style.color = '#667eea';
-
-    canvasCtx.restore();
 }
 
-function isValidHand(landmarks, label) {
-    const FLATNESS_TOLERANCE = 0.15;  // Adjusted for normalized coords (0-1 range)
-
-    // Check if hand is flat (index MCP and pinky MCP should be at similar y)
-    const idxMcpY = landmarks[5].y;
-    const pinkyMcpY = landmarks[17].y;
-
-    if (Math.abs(idxMcpY - pinkyMcpY) > FLATNESS_TOLERANCE) {
-        return {valid: false, message: 'Keep Hand Flat!'};
+async function completeChallenge() {
+    // Stop detection interval
+    if (detectionInterval) {
+        clearInterval(detectionInterval);
+        detectionInterval = null;
     }
 
-    // Check palm orientation (thumb and pinky tips)
-    const thumbTipX = landmarks[4].x;
-    const pinkyTipX = landmarks[20].x;
-
-    if (label === 'Left') {
-        // For left hand, thumb should be on the right side (greater x)
-        if (thumbTipX <= pinkyTipX) {
-            return {valid: false, message: 'Rotate Palm Up'};
-        }
-    } else {
-        // For right hand, thumb should be on the left side (smaller x)
-        if (thumbTipX >= pinkyTipX) {
-            return {valid: false, message: 'Rotate Palm Up'};
-        }
-    }
-
-    return {valid: true, message: 'OK'};
-}
-
-function completeChallenge() {
     // Stop camera stream
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
 
+    // Stop server-side detection
+    try {
+        await fetch('/api/stop-hand-detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+    } catch (err) {
+        console.error('Error stopping hand detection:', err);
+    }
+
     showModal('Success!', '67 Challenge Complete! You passed all tests!', () => {
         resetToStart();
     });
-}
-
-// MediaPipe drawing utilities
-const HAND_CONNECTIONS = [
-    [0, 1], [1, 2], [2, 3], [3, 4],
-    [0, 5], [5, 6], [6, 7], [7, 8],
-    [0, 9], [9, 10], [10, 11], [11, 12],
-    [0, 13], [13, 14], [14, 15], [15, 16],
-    [0, 17], [17, 18], [18, 19], [19, 20],
-    [5, 9], [9, 13], [13, 17]
-];
-
-function drawConnectors(ctx, landmarks, connections, style) {
-    ctx.strokeStyle = style.color;
-    ctx.lineWidth = style.lineWidth;
-
-    for (const connection of connections) {
-        const start = landmarks[connection[0]];
-        const end = landmarks[connection[1]];
-
-        ctx.beginPath();
-        ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
-        ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
-        ctx.stroke();
-    }
-}
-
-function drawLandmarks(ctx, landmarks, style) {
-    ctx.fillStyle = style.color;
-
-    for (const landmark of landmarks) {
-        ctx.beginPath();
-        ctx.arc(
-            landmark.x * ctx.canvas.width,
-            landmark.y * ctx.canvas.height,
-            style.radius,
-            0,
-            2 * Math.PI
-        );
-        ctx.fill();
-    }
 }
