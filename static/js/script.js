@@ -332,15 +332,6 @@ function onHandsResults(results, canvasCtx, canvasElement) {
         return;
     }
 
-    // Set canvas size to match video
-    canvasElement.width = results.image.width;
-    canvasElement.height = results.image.height;
-
-    // Draw the camera feed
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
     // Log hand detection
     if (results.multiHandLandmarks) {
         console.log(`Detected ${results.multiHandLandmarks.length} hand(s)`);
@@ -358,15 +349,11 @@ function onHandsResults(results, canvasCtx, canvasElement) {
 
         const remaining = Math.floor((SUCCESS_DISPLAY_DURATION - elapsed) / 1000) + 1;
 
-        // Draw success message
-        canvasCtx.font = 'bold 48px Arial';
-        canvasCtx.fillStyle = '#00ff00';
-        canvasCtx.fillText('67 ACTIVATED!', 50, canvasElement.height / 2);
+        // Show success message in status display
+        document.getElementById('gesture-status').innerHTML = '<span class="success-message">67 ACTIVATED!</span>';
+        document.getElementById('rep-count').textContent = `Closing in ${remaining}...`;
+        document.getElementById('rep-count').style.color = '#00ff00';
 
-        canvasCtx.font = '32px Arial';
-        canvasCtx.fillText(`Closing in ${remaining}...`, 50, canvasElement.height / 2 + 60);
-
-        canvasCtx.restore();
         return;
     }
 
@@ -386,22 +373,10 @@ function onHandsResults(results, canvasCtx, canvasElement) {
 
             if (isValid.valid) {
                 validHandsCount++;
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ff00', lineWidth: 2});
-                drawLandmarks(canvasCtx, landmarks, {color: '#00ff00', lineWidth: 1, radius: 3});
-
                 handData.push({
                     label: handedness,
                     wrist: landmarks[0]
                 });
-            } else {
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#ff0000', lineWidth: 2});
-                drawLandmarks(canvasCtx, landmarks, {color: '#ff0000', lineWidth: 1, radius: 3});
-
-                // Draw error message near wrist
-                const wrist = landmarks[0];
-                canvasCtx.font = '16px Arial';
-                canvasCtx.fillStyle = '#ff0000';
-                canvasCtx.fillText(isValid.message, wrist.x * canvasElement.width - 40, wrist.y * canvasElement.height + 30);
             }
         }
 
@@ -455,8 +430,7 @@ function onHandsResults(results, canvasCtx, canvasElement) {
     document.getElementById('gesture-status').textContent = statusText;
     document.getElementById('gesture-status').style.color = statusColor;
     document.getElementById('rep-count').textContent = `Reps: ${cycleCount}`;
-
-    canvasCtx.restore();
+    document.getElementById('rep-count').style.color = '#667eea';
 }
 
 function isValidHand(landmarks, label) {

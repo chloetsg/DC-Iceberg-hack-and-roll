@@ -175,12 +175,7 @@ h3 {
 }
 
 .video-container {
-    position: relative;
-    margin: 20px auto;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: none;
 }
 
 #video-feed {
@@ -188,29 +183,45 @@ h3 {
 }
 
 #video-canvas {
-    max-width: 640px;
-    width: 100%;
-    height: auto;
-    border: 3px solid #667eea;
-    border-radius: 10px;
+    display: none;
 }
 
 .status-display {
     text-align: center;
-    margin: 20px 0;
+    margin: 40px 0;
+    padding: 40px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    border: 3px solid #667eea;
 }
 
 #gesture-status {
-    font-size: 24px;
+    font-size: 36px;
+    font-weight: bold;
     color: #764ba2;
-    margin: 10px 0;
+    margin: 20px 0;
+    text-transform: uppercase;
 }
 
 #rep-count {
-    font-size: 32px;
+    font-size: 64px;
     font-weight: bold;
     color: #667eea;
-    margin: 10px 0;
+    margin: 30px 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-display .success-message {
+    font-size: 48px;
+    color: #00ff00;
+    font-weight: bold;
+    margin: 20px 0;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 @media (max-width: 768px) {
