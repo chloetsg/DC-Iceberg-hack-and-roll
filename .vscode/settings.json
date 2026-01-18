@@ -1,5 +1,6 @@
 {
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
-    "code-runner.ignoreSelection": true
+    "code-runner.ignoreSelection": true,
+    "python-envs.defaultEnvManager": "ms-python.python:conda"
 }

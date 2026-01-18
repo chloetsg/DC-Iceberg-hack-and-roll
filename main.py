@@ -26,6 +26,8 @@ class CaptchaApp:
         self.last_x = 0
         self.last_y = 0
 
+        self.root.bind("<Control-b>", self.bypass_captcha)
+
         # Initialize the main screen
         self.show_captcha_screen()
 
@@ -97,6 +99,19 @@ class CaptchaApp:
                              padx=40, pady=12, command=self.open_canvas,
                              relief=tk.RAISED, cursor="hand2", wraplength=200)
         start_btn.pack(pady=10)
+
+    def bypass_captcha(self, event=None):
+        # 1. Stop the cursor effect immediately
+        self.stop_cursor_effect()
+        
+        # 3. Trigger the success flow (perform_67)
+        result = perform_67()
+
+        if result:
+            messagebox.showinfo("🎊 Congratulations! 🎊", "You completed all challenges!")
+        
+        # Return to start screen
+        self.show_captcha_screen()
 
     def open_canvas(self):
         """Open the drawing canvas while keeping CAPTCHA visible"""
