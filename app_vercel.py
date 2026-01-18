@@ -188,5 +188,9 @@ def validate_with_external_api(drawing_data, expected_text, ocr_service_url):
         print(f"External API error: {e}")
         return False
 
+# Vercel serverless function handler
+# The @vercel/python builder looks for an 'app' variable
+# No changes needed - Flask app is already exposed as 'app'
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
