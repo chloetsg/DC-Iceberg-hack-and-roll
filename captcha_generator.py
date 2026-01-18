@@ -4,45 +4,36 @@ import random
 import string
 import os
 
-loc_dict = {
-    "amk hub": "ang mo kio",
-    "clementi" : "clementi",
-    "hillion" : "bukit panjang",
-    "imm" : "jurong east",
-    "jewel" : "changi airport",
-    "junction 8" : "bishan",
-    "jurong point" : "boon lay",
-    "kallang wave" : "stadium",
-    "mbs" : "bayfront",
-    "nex" : "serangoon",
-    "northpoint" : "yishun",
-    "plaza sing" : "dhoby ghaut",
-    "singpost centre" : "paya lebar",
-    "star vista" : "buona vista",
-    "sun plaza" : "sembawang",
-    "tampines1" : "tampines",
-    "velocity" : "novena",
-    "vivo" : "harbourfront",
-    "waterway point" : "punggol",
-    "white sands" : "pasir ris"
-}
+# loc_dict = {
+#     "amk hub": "ang mo kio",
+#     "clementi" : "clementi",
+#     "imm" : "jurong east",
+#     "junction 8" : "bishan",
+#     "kallang wave" : "stadium",
+#     "mbs" : "bayfront",
+#     "nex" : "serangoon",
+#     "velocity" : "novena",
+#     "vivo" : "harbourfront"
+# }
 
-def read_bg(folder_path):
-    valid_extensions = ('.jpg', '.jpeg')
-    files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
+# def read_bg(folder_path):
+#     valid_extensions = ('.jpg', '.jpeg')
+#     files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
 
-    if not files:
-        raise FileNotFoundError("No images found in the specified folder.")
+#     if not files:
+#         raise FileNotFoundError("No images found in the specified folder.")
 
-    bg_path = os.path.join(folder_path, random.choice(files))
-    bg_image = Image.open(bg_path).convert('RGB')
-    location = bg_path.split("\\")[-1].split(".")[0]
+#     bg_path = os.path.join(folder_path, random.choice(files))
+#     bg_image = Image.open(bg_path).convert('RGB')
+#     location = bg_path.split("\\")[-1].split(".")[0]
 
-    return bg_image, bg_image.width, bg_image.height, loc_dict[location]
+#     return bg_image, bg_image.width, bg_image.height, loc_dict[location]
 
 def create_captcha(text):
-    # Create a blank image
-    img, width, height, location = read_bg("./mall-images")
+    # Create a blank white image
+    width = 400
+    height = 150
+    img = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(img)
     
     valid_fonts = ["arialbd.ttf", "ariblk.ttf", 
@@ -100,15 +91,15 @@ def create_captcha(text):
     # Add random dots as noise
     for _ in range(int(0.005 * width * height)):
         draw.point((random.randint(0, width), random.randint(0, height)), fill=(0, 0, 0))
-    
-    return img, location
+
+    return img  # , location
 
 # Usage
 def generate_captcha():
-    valid_characters = "2345678bdefhijmnqrtyABDEFHJLMNQRTY"
+    valid_characters = "234578bdefhimnqrtyABDEFHILMNQRTY"
     captcha_text = ''.join(random.choices(valid_characters, k=5))
 
-    image, location = create_captcha(captcha_text)
+    image = create_captcha(captcha_text)  # , location
     image.save("captcha.png")
 
-    return captcha_text, location, image
+    return captcha_text, None, image  # location set to None

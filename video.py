@@ -11,16 +11,28 @@ def perform_67():
     # --- Validation Thresholds ---
     FLATNESS_TOLERANCE = 1
 
-    mp_hands = mp.solutions.hands
-    mp_drawing = mp.solutions.drawing_utils
+    # Check if mediapipe has solutions attribute
+    try:
+        mp_hands = mp.solutions.hands
+        mp_drawing = mp.solutions.drawing_utils
+    except AttributeError as e:
+        print(f"MediaPipe error: {e}")
+        print(f"MediaPipe version may be incompatible. Please ensure mediapipe 0.10.14 is installed.")
+        print(f"Run: .venv\\Scripts\\pip install mediapipe==0.10.14")
+        return False
 
-    hands = mp_hands.Hands(max_num_hands=2, min_detection_confidence=0.7)
+    try:
+        hands = mp_hands.Hands(max_num_hands=2, min_detection_confidence=0.7)
+    except Exception as e:
+        print(f"Error initializing MediaPipe Hands: {e}")
+        return False
 
     # State Variables
     last_state = "NEUTRAL"
     cycle_count = 0
     last_move_time = time.time()
     success_trigger_time = None  # ### NEW: Tracks when success happened
+    challenge_completed = False  # Track if challenge was actually completed
 
     # --- Validator Function ---
     def is_valid_hand(landmarks, label):
@@ -56,10 +68,11 @@ def perform_67():
         # If we already succeeded, just show the success screen and count down
         if success_trigger_time is not None:
             elapsed = time.time() - success_trigger_time
-            
+
             # 1. Check if time is up
             if elapsed > SUCCESS_DISPLAY_DURATION:
                 print("Finished Success Display. Exiting...")
+                challenge_completed = True  # Mark as completed
                 break
             
             # 2. If not up, just display the static success text
@@ -145,4 +158,4 @@ def perform_67():
     cap.release()
     cv2.destroyAllWindows()
 
-    return True
+    return challenge_completed

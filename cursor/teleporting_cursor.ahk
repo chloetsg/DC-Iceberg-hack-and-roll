@@ -4,8 +4,8 @@
 ; Configuration
 global isActive := true  ; Auto-start enabled
 global boundaryRestrictionEnabled := false  ; OFF by default for tkinter compatibility
-global minInterval := 500    ; Minimum time between teleports (ms)
-global maxInterval := 1500   ; Maximum time between teleports (ms)
+global minInterval :=  5000    ; Minimum time between teleports (ms)
+global maxInterval := 8000   ; Maximum time between teleports (ms)
 
 ; Canvas bounds (loaded from config file)
 canvasLeft := 0

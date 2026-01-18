@@ -7,7 +7,7 @@ class StrictValidator:
         # Use GPU if available for faster processing
         self.reader = easyocr.Reader(['en'], gpu=False)  # Set to True if you have GPU
 
-    def validate(self, image_np, target_text):
+    def validate(self, image_np, target_text, allow_spaces=False):
         # 1. Minimal Preprocessing
         if len(image_np.shape) == 3:
             gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
@@ -15,10 +15,16 @@ class StrictValidator:
             gray = image_np
 
         # 2. Run OCR with faster settings
+        # If allow_spaces is True (for locations), include space in allowlist
+        if allow_spaces:
+            allowlist = 'bcdefhiklmnopqrstuvwxyzABCDEFHIKLMNOPQRSTUVWXYZ1234578 '
+        else:
+            allowlist = 'bcdefhiklmnopqrstuvwxyzABCDEFHIKLMNOPQRSTUVWXYZ1234578'
+
         results = self.reader.readtext(
             gray,
             detail=1,
-            allowlist='bcdefhijklmnopqrstuvwxyzABCDEFHIJKLMNOPQRSTUVWXYZ12345678',
+            allowlist=allowlist,
             paragraph=False,  # Faster processing
             min_size=10       # Ignore very small text
         )

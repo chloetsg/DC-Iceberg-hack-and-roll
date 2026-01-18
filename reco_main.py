@@ -2,7 +2,7 @@ import cv2
 from validator import StrictValidator  # Assuming you saved the class in validator.py
 
 
-def validate_writing(img_path, captcha_text):
+def validate_writing(img_path, captcha_text, allow_spaces=False):
     # 1. Initialize the validator
     # (This takes a few seconds to load the AI model)
     print("Initializing EasyOCR validator...")
@@ -23,7 +23,7 @@ def validate_writing(img_path, captcha_text):
 
     # 3. Put the image into the validator
     # Target text is what you EXPECTED them to write
-    success, message = my_validator.validate(image_np, target_text=captcha_text)
+    success, message = my_validator.validate(image_np, target_text=captcha_text, allow_spaces=allow_spaces)
 
     print(f"Result: {success}")
     print(f"Message: {message}")

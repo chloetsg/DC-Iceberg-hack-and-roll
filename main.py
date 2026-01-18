@@ -153,31 +153,206 @@ class CaptchaApp:
                             relief=tk.RAISED, cursor="hand2")
         submit_btn.pack(side=tk.LEFT, padx=10)
 
-        # Start teleporting cursor effect
-        self.start_cursor_effect()
+        # Start cursor effect after a short delay to ensure canvas is ready
+        print("\n!!! Canvas created, starting cursor effect in 500ms...")
+        self.root.after(500, self.start_cursor_effect)
+
+    # LOCATION GUESSING CHALLENGE - COMMENTED OUT
+    # def open_location_canvas(self):
+    #     """Open the drawing canvas for location guessing"""
+    #     # Clear window
+    #     for widget in self.root.winfo_children():
+    #         widget.destroy()
+
+    #     # Main frame
+    #     main_frame = tk.Frame(self.root, bg="white", padx=20, pady=20)
+    #     main_frame.pack(expand=True, fill=tk.BOTH, padx=20, pady=20)
+
+    #     # Top section - CAPTCHA image display (to show the background)
+    #     captcha_section = tk.Frame(main_frame, bg="white")
+    #     captcha_section.pack(pady=10)
+
+    #     captcha_title = tk.Label(captcha_section, text="Guess the MRT station from the mall background:",
+    #                             font=("Arial", 14, "bold"), bg="white", fg="#764ba2")
+    #     captcha_title.pack()
+
+    #     # Display CAPTCHA image with mall background
+    #     captcha_img_label = tk.Label(captcha_section, image=self.captcha_photo,
+    #                                 bg="white", relief=tk.SOLID, borderwidth=2)
+    #     captcha_img_label.pack(pady=5)
+
+    #     # Instructions
+    #     instruction_label = tk.Label(main_frame, text="Write the MRT station name (e.g., 'ang mo kio', 'bishan'):",
+    #                     font=("Arial", 12), bg="white", fg="#333")
+    #     instruction_label.pack(pady=5)
+
+    #     # Drawing section
+    #     title = tk.Label(main_frame, text="Draw your answer here:",
+    #                     font=("Arial", 16, "bold"), bg="white", fg="#764ba2")
+    #     title.pack(pady=5)
+
+    #     # Canvas for drawing
+    #     self.location_canvas = Canvas(main_frame, width=500, height=250,
+    #                         bg="black", cursor="crosshair",
+    #                         relief=tk.SOLID, borderwidth=3)
+    #     self.location_canvas.pack(pady=10)
+
+    #     # Bind mouse events
+    #     self.location_canvas.bind("<Button-1>", self.start_draw_location)
+    #     self.location_canvas.bind("<B1-Motion>", self.draw_location)
+    #     self.location_canvas.bind("<ButtonRelease-1>", self.stop_draw_location)
+
+    #     # Control buttons frame
+    #     btn_frame = tk.Frame(main_frame, bg="white")
+    #     btn_frame.pack(pady=15)
+
+    #     clear_btn = tk.Button(btn_frame, text="Clear",
+    #                         font=("Arial", 12, "bold"), bg="#667eea", fg="white",
+    #                         padx=20, pady=8, command=self.clear_location_canvas,
+    #                         relief=tk.RAISED, cursor="hand2")
+    #     clear_btn.pack(side=tk.LEFT, padx=10)
+
+    #     submit_btn = tk.Button(btn_frame, text="Submit Location",
+    #                         font=("Arial", 12, "bold"), bg="#764ba2", fg="white",
+    #                         padx=20, pady=8, command=self.submit_location_answer,
+    #                         relief=tk.RAISED, cursor="hand2")
+    #     submit_btn.pack(side=tk.LEFT, padx=10)
+
+    #     # Start teleporting cursor effect
+    #     self.start_cursor_effect()
+
+    # def start_draw_location(self, event):
+    #     """Start drawing on location canvas"""
+    #     self.drawing = True
+    #     self.last_x = event.x
+    #     self.last_y = event.y
+
+    # def draw_location(self, event):
+    #     """Draw on location canvas"""
+    #     if self.drawing:
+    #         self.location_canvas.create_line(self.last_x, self.last_y,
+    #                                event.x, event.y,
+    #                                fill="white", width=5,
+    #                                capstyle=tk.ROUND, smooth=True)
+    #         self.last_x = event.x
+    #         self.last_y = event.y
+
+    # def stop_draw_location(self, event):
+    #     """Stop drawing on location canvas"""
+    #     self.drawing = False
+
+    # def clear_location_canvas(self):
+    #     """Clear the location canvas"""
+    #     self.location_canvas.delete("all")
+
+    # def submit_location_answer(self):
+    #     """Submit the location drawing for validation"""
+    #     # Stop cursor effect
+    #     self.stop_cursor_effect()
+
+    #     # Save canvas as image
+    #     try:
+    #         print(f"Validating against location: {self.location}")
+
+    #         # Get canvas dimensions
+    #         width = self.location_canvas.winfo_width()
+    #         height = self.location_canvas.winfo_height()
+
+    #         # Create a blank image matching canvas size
+    #         canvas_image = np.zeros((height, width, 3), dtype=np.uint8)
+
+    #         # Get all canvas items and draw them on the numpy array
+    #         item_count = 0
+    #         for item in self.location_canvas.find_all():
+    #             coords = self.location_canvas.coords(item)
+    #             if len(coords) >= 4:
+    #                 # Draw line
+    #                 x1, y1, x2, y2 = int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])
+    #                 cv2.line(canvas_image, (x1, y1), (x2, y2), (255, 255, 255), 5)
+    #                 item_count += 1
+
+    #         print(f"Drew {item_count} line segments to image")
+
+    #         # Save the image
+    #         cv2.imwrite('location_drawing.png', canvas_image)
+    #         print("Saved drawing to location_drawing.png")
+
+    #         # Check if canvas is empty
+    #         if item_count == 0:
+    #             messagebox.showwarning("Empty Canvas", "Please draw something before submitting!")
+    #             return
+
+    #         # Show loading message
+    #         messagebox.showinfo("Validating...", "Please wait while we validate your answer.\nThis may take a few seconds...")
+
+    #         # Validate the drawing (with allow_spaces=True for location names)
+    #         print("Starting location validation...")
+    #         success = validate_writing('location_drawing.png', self.location, allow_spaces=True)
+    #         print(f"Location validation result: {success}")
+
+    #         if success:
+    #             messagebox.showinfo("Success!", "Location Correct!\n\nStarting final challenge...")
+    #             # Directly call video.py's perform_67() function
+    #             # This will open the OpenCV window for hand gesture detection
+    #             result = perform_67()
+
+    #             if result:
+    #                 messagebox.showinfo("🎊 Congratulations! 🎊", "You completed all challenges!\n\nYou are amazing!")
+    #             else:
+    #                 messagebox.showinfo("Challenge Ended", "The 67 challenge was closed.")
+
+    #             # Return to start screen
+    #             self.show_captcha_screen()
+    #         else:
+    #             messagebox.showerror("Failed", f"Location validation failed. Expected: '{self.location}'.\n\nPlease try again!")
+
+    #     except Exception as e:
+    #         messagebox.showerror("Error", f"Error processing image: {str(e)}")
+    #         print(f"Error details: {e}")
+    #         import traceback
+    #         traceback.print_exc()
 
     def start_cursor_effect(self):
-        """Start the teleporting cursor executable or AHK script"""
-        # Try .exe first, then .ahk
-        cursor_exe_path = r'cursor\teleporting_cursor.exe'
-        cursor_ahk_path = r'cursor\teleporting_cursor.ahk'
+        """Start the teleporting cursor executable"""
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cursor_exe_path = os.path.join(script_dir, 'cursor', 'teleporting_cursor.exe')
+
+        # First, kill any existing teleporting_cursor processes to avoid conflicts
+        try:
+            subprocess.run(['taskkill', '/F', '/IM', 'teleporting_cursor.exe'],
+                         capture_output=True, timeout=2)
+            subprocess.run(['taskkill', '/F', '/IM', 'jittery_cursor.exe'],
+                         capture_output=True, timeout=2)
+            print("Killed existing cursor effect processes")
+        except:
+            pass
+
+        print(f"\n=== STARTING CURSOR EFFECT ===")
+        print(f"Script directory: {script_dir}")
+        print(f"Executable path: {cursor_exe_path}")
+        print(f"File exists: {os.path.exists(cursor_exe_path)}")
 
         if os.path.exists(cursor_exe_path):
             try:
-                self.cursor_process = subprocess.Popen([cursor_exe_path])
-                print("Cursor effect started (EXE)")
+                # Run the executable directly (no AutoHotkey needed!)
+                print(f"Launching: {cursor_exe_path}")
+                self.cursor_process = subprocess.Popen([cursor_exe_path],
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE)
+                print(f"✓ Teleporting cursor started successfully!")
+                print(f"✓ Process ID: {self.cursor_process.pid}")
+                print(f"✓ Your cursor should teleport every 1-2 seconds")
+                print("=================================\n")
+
             except Exception as e:
-                print(f"Failed to start cursor effect: {e}")
-        elif os.path.exists(cursor_ahk_path):
-            try:
-                # Run AHK script directly (requires AutoHotkey v2 installed)
-                self.cursor_process = subprocess.Popen(['AutoHotkey.exe', cursor_ahk_path])
-                print("Cursor effect started (AHK)")
-            except Exception as e:
-                print(f"Failed to start cursor AHK: {e}")
-                print("Continuing without cursor effect")
+                print(f"ERROR: Failed to start teleporting cursor: {e}")
+                import traceback
+                traceback.print_exc()
         else:
-            print("Cursor executable/script not found, continuing without effect")
+            print("ERROR: Teleporting cursor executable not found!")
+            print(f"Looking for: {cursor_exe_path}")
+            print("\nPlease verify the file exists at this location.")
 
     def stop_cursor_effect(self):
         """Stop the teleporting cursor effect"""
@@ -185,7 +360,7 @@ class CaptchaApp:
             try:
                 self.cursor_process.terminate()
                 self.cursor_process = None
-                print("Cursor effect stopped")
+                print("Jittery cursor effect stopped")
             except Exception as e:
                 print(f"Failed to stop cursor effect: {e}")
 
@@ -259,9 +434,8 @@ class CaptchaApp:
             print(f"Validation result: {success}")
 
             if success:
-                messagebox.showinfo("Success!", "Validation Passed!\n\nStarting final challenge...")
-                # Directly call video.py's perform_67() function
-                # This will open the OpenCV window for hand gesture detection
+                messagebox.showinfo("Success!", "CAPTCHA Passed!\n\nStarting final challenge...")
+                # Skip location guessing, go directly to video challenge
                 result = perform_67()
 
                 if result:
@@ -273,6 +447,9 @@ class CaptchaApp:
                 self.show_captcha_screen()
             else:
                 messagebox.showerror("Failed", "Validation failed. Please try again.\n\nMake sure to write clearly!")
+                # Restart cursor effect after failed validation
+                print("Restarting cursor effect after failed validation...")
+                self.start_cursor_effect()
 
         except Exception as e:
             messagebox.showerror("Error", f"Error processing image: {str(e)}")

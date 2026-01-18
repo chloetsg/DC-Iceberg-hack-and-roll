@@ -8,8 +8,8 @@
 #SingleInstance Force
 
 ; Global variables
-effectEnabled := false
-boundaryRestrictionEnabled := true  ; ON by default
+effectEnabled := true  ; Auto-start enabled
+boundaryRestrictionEnabled := false  ; OFF by default for tkinter compatibility
 
 ; Cursor tracking variables
 lastX := 0
@@ -22,11 +22,11 @@ canvasRight := 0
 canvasBottom := 0
 
 ; Tuning parameters - adjust these to change difficulty
-baseJitter := 0          ; Random jitter amount (pixels)
-speedMultiplier := 10   ; How much speed amplifies the throw distance
-directionBias := 1     ; How much jitter biases toward movement direction (0-1)
+baseJitter := 5       ; Random jitter amount (pixels)
+speedMultiplier := 0.1   ; How much speed amplifies the throw distance
+directionBias := 0.2     ; How much jitter biases toward movement direction (0-1)
                          ; 0 = pure random, 1 = always in movement direction
-perpendicularBias := 1  ; How much to add perpendicular drift (makes writing hard)
+perpendicularBias := 0.2  ; How much to add perpendicular drift (makes writing hard)
 
 ; Load canvas bounds from JSON file
 LoadCanvasBounds() {
@@ -173,3 +173,17 @@ JitterCursor() {
 RemoveToolTip() {
     ToolTip()
 }
+
+; Auto-start the jitter effect
+StartJitter() {
+    global effectEnabled, lastX, lastY
+    if (effectEnabled) {
+        ; Load canvas bounds when enabling effect (optional for tkinter)
+        LoadCanvasBounds()
+        MouseGetPos(&lastX, &lastY)
+        SetTimer(JitterCursor, 5)
+    }
+}
+
+; Start on launch
+StartJitter()
