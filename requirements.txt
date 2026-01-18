@@ -1,11 +1,7 @@
-#Python requirements
+# Vercel-optimized requirements (under 250MB)
+# NO heavy ML libraries (torch, easyocr, opencv)
 Flask==3.0.0
 Flask-CORS==4.0.0
-pillow==12.0.0
-numpy==2.2.6
-mediapipe==0.10.14
-easyocr==1.7.2
-opencv-python-headless==4.8.1.78
-torch==2.1.1
-torchvision==0.16.1
+Pillow==10.1.0
+requests==2.31.0
 gunicorn==21.2.0
