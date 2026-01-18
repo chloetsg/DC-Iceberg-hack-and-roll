@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_cors import CORS
 import io
 import base64
 from PIL import Image
@@ -6,12 +7,16 @@ import numpy as np
 import cv2
 from captcha_generator import generate_captcha
 from reco_main import validate_writing
+from video_stream import get_detector, reset_detector
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 # Store current session data (in production, use Redis or database)
 sessions = {}
+# Store hand detection sessions
+hand_sessions = {}
 
 @app.route('/')
 def index():
@@ -86,6 +91,79 @@ def api_validate_captcha():
             'success': True,
             'validated': success,
             'expected': captcha_text
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/start-hand-detection', methods=['POST'])
+def api_start_hand_detection():
+    """Initialize hand detection session"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+
+        # Reset detector for new session
+        detector = reset_detector()
+        hand_sessions[session_id] = detector
+
+        return jsonify({
+            'success': True,
+            'message': 'Hand detection started'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/process-hand-frame', methods=['POST'])
+def api_process_hand_frame():
+    """Process a video frame for hand detection"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        frame_data = data.get('frame')  # Base64 encoded frame
+
+        if session_id not in hand_sessions:
+            # Create new detector if session doesn't exist
+            detector = get_detector()
+            hand_sessions[session_id] = detector
+        else:
+            detector = hand_sessions[session_id]
+
+        # Process the frame
+        result = detector.process_frame_from_browser(frame_data)
+
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+    except Exception as e:
+        print(f"Error processing hand frame: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stop-hand-detection', methods=['POST'])
+def api_stop_hand_detection():
+    """Stop hand detection session"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+
+        if session_id in hand_sessions:
+            hand_sessions[session_id].cleanup()
+            del hand_sessions[session_id]
+
+        return jsonify({
+            'success': True,
+            'message': 'Hand detection stopped'
         })
     except Exception as e:
         return jsonify({
