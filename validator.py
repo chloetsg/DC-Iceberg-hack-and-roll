@@ -18,7 +18,7 @@ class StrictValidator:
         results = self.reader.readtext(
             gray,
             detail=1,
-            allowlist='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
+            allowlist='bcdefhijklmnopqrstuvwxyzABCDEFHIJKLMNOPQRSTUVWXYZ12345678',
             paragraph=False,  # Faster processing
             min_size=10       # Ignore very small text
         )

@@ -105,7 +105,7 @@ def create_captcha(text):
 
 # Usage
 def generate_captcha():
-    valid_characters = "23456789abdefghijmnqrtyABDEFGHJLMNQRTY"
+    valid_characters = "2345678bdefhijmnqrtyABDEFHJLMNQRTY"
     captcha_text = ''.join(random.choices(valid_characters, k=5))
 
     image, location = create_captcha(captcha_text)
