@@ -22,7 +22,7 @@
             <h3>Draw the letters below:</h3>
             <img id="captchaImg" src="" alt="Loading...">
             
-            <canvas id="drawingCanvas" width = "300" height="150", style="border:1px solid #000; cursor:crosshair;"></canvas>
+            <canvas id="drawingCanvas" width = "800" height="200", style="border:1px solid #000; cursor:crosshair;"></canvas>
             <br>
             <button onclick="submitDrawing()">Submit Answer</button>
         </div>
@@ -94,8 +94,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    drawing: imageBase64,
-                    text: document.getElementById('captchaImg').dataset.answer // Hidden state
+                    drawing: imageBase64
                 })
             });
 
