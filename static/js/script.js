@@ -257,9 +257,22 @@ function startVideoChallenge() {
 }
 
 function initializeHandDetection() {
+    console.log('Initializing hand detection...');
+
     const videoElement = document.getElementById('video-feed');
     const canvasElement = document.getElementById('video-canvas');
     const canvasCtx = canvasElement.getContext('2d');
+
+    // Set canvas size
+    canvasElement.width = 640;
+    canvasElement.height = 480;
+
+    // Check if MediaPipe is loaded
+    if (typeof Hands === 'undefined') {
+        console.error('MediaPipe Hands not loaded!');
+        showModal('Error', 'Failed to load hand detection library. Please refresh the page.');
+        return;
+    }
 
     // Initialize MediaPipe Hands
     hands = new Hands({
@@ -277,6 +290,8 @@ function initializeHandDetection() {
 
     hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
 
+    console.log('Starting camera...');
+
     // Start camera
     camera = new Camera(videoElement, {
         onFrame: async () => {
@@ -286,11 +301,21 @@ function initializeHandDetection() {
         height: 480
     });
 
-    camera.start();
+    camera.start().then(() => {
+        console.log('Camera started successfully');
+    }).catch(err => {
+        console.error('Camera error:', err);
+        showModal('Error', 'Failed to access camera. Please allow camera permissions.');
+    });
 }
 
 function onHandsResults(results, canvasCtx, canvasElement) {
-    // Set canvas size
+    if (!results || !results.image) {
+        console.error('No results or image from MediaPipe');
+        return;
+    }
+
+    // Set canvas size to match video
     canvasElement.width = results.image.width;
     canvasElement.height = results.image.height;
 
@@ -298,6 +323,11 @@ function onHandsResults(results, canvasCtx, canvasElement) {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    // Log hand detection
+    if (results.multiHandLandmarks) {
+        console.log(`Detected ${results.multiHandLandmarks.length} hand(s)`);
+    }
 
     // If success has been triggered, show countdown
     if (successTriggerTime !== null) {
