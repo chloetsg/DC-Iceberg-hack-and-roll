@@ -19,20 +19,32 @@ function setupEventListeners() {
 }
 
 function generateNewCaptcha() {
+    console.log('Generating new CAPTCHA...');
+
     fetch('/api/generate-captcha')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('CAPTCHA data received:', data);
             if (data.success) {
                 sessionId = data.session_id;
-                document.getElementById('captcha-image').src = data.captcha_image;
-                console.log('CAPTCHA generated:', data.captcha_text);
+                const imgElement = document.getElementById('captcha-image');
+                imgElement.src = data.captcha_image;
+                imgElement.style.display = 'block';
+                console.log('CAPTCHA generated successfully:', data.captcha_text);
             } else {
+                console.error('CAPTCHA generation failed:', data.error);
                 showModal('Error', 'Failed to generate CAPTCHA: ' + data.error);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showModal('Error', 'Failed to connect to server');
+            console.error('Error generating CAPTCHA:', error);
+            showModal('Error', 'Failed to connect to server: ' + error.message);
         });
 }
 
