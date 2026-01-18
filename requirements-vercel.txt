@@ -1,0 +1,12 @@
+# Vercel-optimized requirements (under 250MB)
+Flask==3.0.0
+Flask-CORS==4.0.0
+Pillow==10.1.0
+requests==2.31.0
+gunicorn==21.2.0
+
+# Optional: Use Google Cloud Vision for OCR (lightweight client)
+# google-cloud-vision==3.4.5
+
+# Alternative: Use Tesseract (lighter than EasyOCR but needs system install)
+# pytesseract==0.3.10
