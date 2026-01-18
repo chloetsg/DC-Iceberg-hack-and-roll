@@ -155,8 +155,8 @@ function submitAnswer() {
     .then(data => {
         if (data.success) {
             if (data.validated) {
-                showModal('Success!', 'CAPTCHA Passed! You completed the challenge!', () => {
-                    // Reset to start screen
+                showModal('Success!', 'CAPTCHA Passed! Click OK to try another one.', () => {
+                    // Generate new CAPTCHA and reset
                     resetToStart();
                 });
             } else {

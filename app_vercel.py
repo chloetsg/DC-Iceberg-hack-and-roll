@@ -10,8 +10,12 @@ import base64
 from PIL import Image
 import os
 
-# Lightweight captcha generator (no heavy dependencies)
-from captcha_generator import generate_captcha
+# Lightweight captcha generator (Vercel-compatible)
+try:
+    from captcha_generator_vercel import generate_captcha
+except ImportError:
+    # Fallback if file doesn't exist
+    from captcha_generator import generate_captcha
 
 app = Flask(__name__)
 CORS(app)
