@@ -167,9 +167,9 @@ function submitAnswer() {
     .then(data => {
         if (data.success) {
             if (data.validated) {
-                showModal('Success!', 'CAPTCHA Passed! Click OK to try another one.', () => {
-                    // Generate new CAPTCHA and reset
-                    resetToStart();
+                showModal('Success!', 'CAPTCHA Passed! Now complete the 67 hand gesture challenge.', () => {
+                    // Move to video screen for 67 challenge
+                    startVideoChallenge();
                 });
             } else {
                 showModal('Failed', `Validation failed. Expected: '${data.expected}'. Please try again!`, () => {
@@ -230,5 +230,264 @@ function closeModal() {
         } catch (e) {
             console.error('Callback error:', e);
         }
+    }
+}
+
+// ==================== VIDEO CHALLENGE (67 HAND GESTURE) ====================
+
+let hands, camera;
+let lastState = "NEUTRAL";
+let cycleCount = 0;
+let lastMoveTime = Date.now();
+let successTriggerTime = null;
+
+const SWAP_THRESHOLD = 0.05;
+const RESET_TIME = 1000; // 1 second
+const SUCCESS_DISPLAY_DURATION = 3000; // 3 seconds
+
+function startVideoChallenge() {
+    // Hide canvas screen, show video screen
+    document.getElementById('canvas-screen').style.display = 'none';
+    document.getElementById('video-screen').style.display = 'block';
+
+    closeModal();
+
+    // Initialize MediaPipe Hands
+    initializeHandDetection();
+}
+
+function initializeHandDetection() {
+    const videoElement = document.getElementById('video-feed');
+    const canvasElement = document.getElementById('video-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    // Initialize MediaPipe Hands
+    hands = new Hands({
+        locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }
+    });
+
+    hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((results) => onHandsResults(results, canvasCtx, canvasElement));
+
+    // Start camera
+    camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await hands.send({image: videoElement});
+        },
+        width: 640,
+        height: 480
+    });
+
+    camera.start();
+}
+
+function onHandsResults(results, canvasCtx, canvasElement) {
+    // Set canvas size
+    canvasElement.width = results.image.width;
+    canvasElement.height = results.image.height;
+
+    // Draw the camera feed
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    // If success has been triggered, show countdown
+    if (successTriggerTime !== null) {
+        const elapsed = Date.now() - successTriggerTime;
+
+        if (elapsed > SUCCESS_DISPLAY_DURATION) {
+            console.log('67 ACTIVATED! Challenge complete.');
+            completeChallenge();
+            return;
+        }
+
+        const remaining = Math.floor((SUCCESS_DISPLAY_DURATION - elapsed) / 1000) + 1;
+
+        // Draw success message
+        canvasCtx.font = 'bold 48px Arial';
+        canvasCtx.fillStyle = '#00ff00';
+        canvasCtx.fillText('67 ACTIVATED!', 50, canvasElement.height / 2);
+
+        canvasCtx.font = '32px Arial';
+        canvasCtx.fillText(`Closing in ${remaining}...`, 50, canvasElement.height / 2 + 60);
+
+        canvasCtx.restore();
+        return;
+    }
+
+    // Normal detection logic
+    let statusText = 'Show 2 Hands';
+    let statusColor = '#888';
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length === 2) {
+        let validHandsCount = 0;
+        const handData = [];
+
+        for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+            const landmarks = results.multiHandLandmarks[i];
+            const handedness = results.multiHandedness[i].label;
+
+            const isValid = isValidHand(landmarks, handedness);
+
+            if (isValid.valid) {
+                validHandsCount++;
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ff00', lineWidth: 2});
+                drawLandmarks(canvasCtx, landmarks, {color: '#00ff00', lineWidth: 1, radius: 3});
+
+                handData.push({
+                    label: handedness,
+                    wrist: landmarks[0]
+                });
+            } else {
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#ff0000', lineWidth: 2});
+                drawLandmarks(canvasCtx, landmarks, {color: '#ff0000', lineWidth: 1, radius: 3});
+
+                // Draw error message near wrist
+                const wrist = landmarks[0];
+                canvasCtx.font = '16px Arial';
+                canvasCtx.fillStyle = '#ff0000';
+                canvasCtx.fillText(isValid.message, wrist.x * canvasElement.width - 40, wrist.y * canvasElement.height + 30);
+            }
+        }
+
+        if (validHandsCount === 2) {
+            // Both hands valid, check for alternating motion
+            let leftWrist = null;
+            let rightWrist = null;
+
+            for (const hand of handData) {
+                if (hand.label === 'Left') leftWrist = hand.wrist;
+                else rightWrist = hand.wrist;
+            }
+
+            if (leftWrist && rightWrist) {
+                const mid = (leftWrist.y + rightWrist.y) / 2;
+                const leftUp = leftWrist.y < (mid - SWAP_THRESHOLD);
+                const rightUp = rightWrist.y < (mid - SWAP_THRESHOLD);
+                const leftDown = leftWrist.y > (mid + SWAP_THRESHOLD);
+                const rightDown = rightWrist.y > (mid + SWAP_THRESHOLD);
+
+                let currentState = "NEUTRAL";
+                if (leftUp && rightDown) currentState = "LEFT_UP";
+                else if (rightUp && leftDown) currentState = "RIGHT_UP";
+
+                if (currentState !== "NEUTRAL" && currentState !== lastState) {
+                    cycleCount++;
+                    lastMoveTime = Date.now();
+                    lastState = currentState;
+                }
+
+                if (Date.now() - lastMoveTime > RESET_TIME) {
+                    cycleCount = 0;
+                    lastState = "NEUTRAL";
+                }
+
+                statusText = `Reps: ${cycleCount}`;
+                statusColor = '#ffff00';
+
+                if (cycleCount >= 2) {
+                    successTriggerTime = Date.now();
+                    console.log('67 DETECTED - Starting Cooldown');
+                }
+            }
+        } else {
+            statusText = 'Fix Hand Position!';
+            statusColor = '#ff0000';
+        }
+    }
+
+    // Update status display
+    document.getElementById('gesture-status').textContent = statusText;
+    document.getElementById('gesture-status').style.color = statusColor;
+    document.getElementById('rep-count').textContent = `Reps: ${cycleCount}`;
+
+    canvasCtx.restore();
+}
+
+function isValidHand(landmarks, label) {
+    const FLATNESS_TOLERANCE = 0.1;
+
+    // Check if hand is flat (index MCP and pinky MCP should be at similar y)
+    const idxMcpY = landmarks[5].y;
+    const pinkyMcpY = landmarks[17].y;
+
+    if (Math.abs(idxMcpY - pinkyMcpY) > FLATNESS_TOLERANCE) {
+        return {valid: false, message: 'Keep Hand Flat!'};
+    }
+
+    // Check palm orientation (thumb and pinky tip positions)
+    const thumbTipX = landmarks[4].x;
+    const pinkyTipX = landmarks[20].x;
+
+    if (label === 'Left') {
+        if (thumbTipX > pinkyTipX) {
+            return {valid: false, message: 'Rotate Palm Up'};
+        }
+    } else {
+        if (thumbTipX < pinkyTipX) {
+            return {valid: false, message: 'Rotate Palm Up'};
+        }
+    }
+
+    return {valid: true, message: 'OK'};
+}
+
+function completeChallenge() {
+    // Stop camera
+    if (camera) {
+        camera.stop();
+    }
+
+    showModal('Success!', '67 Challenge Complete! You passed all tests!', () => {
+        resetToStart();
+    });
+}
+
+// MediaPipe drawing utilities
+const HAND_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 4],
+    [0, 5], [5, 6], [6, 7], [7, 8],
+    [0, 9], [9, 10], [10, 11], [11, 12],
+    [0, 13], [13, 14], [14, 15], [15, 16],
+    [0, 17], [17, 18], [18, 19], [19, 20],
+    [5, 9], [9, 13], [13, 17]
+];
+
+function drawConnectors(ctx, landmarks, connections, style) {
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = style.lineWidth;
+
+    for (const connection of connections) {
+        const start = landmarks[connection[0]];
+        const end = landmarks[connection[1]];
+
+        ctx.beginPath();
+        ctx.moveTo(start.x * ctx.canvas.width, start.y * ctx.canvas.height);
+        ctx.lineTo(end.x * ctx.canvas.width, end.y * ctx.canvas.height);
+        ctx.stroke();
+    }
+}
+
+function drawLandmarks(ctx, landmarks, style) {
+    ctx.fillStyle = style.color;
+
+    for (const landmark of landmarks) {
+        ctx.beginPath();
+        ctx.arc(
+            landmark.x * ctx.canvas.width,
+            landmark.y * ctx.canvas.height,
+            style.radius,
+            0,
+            2 * Math.PI
+        );
+        ctx.fill();
     }
 }

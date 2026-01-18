@@ -48,6 +48,32 @@
         </div>
     </div>
 
+    <div class="container" id="video-screen" style="display: none;">
+        <div class="main-frame">
+            <h1>67 Hand Gesture Challenge</h1>
+
+            <div class="instructions">
+                <h3>Instructions:</h3>
+                <ol>
+                    <li>Show both hands to the camera with palms facing up</li>
+                    <li>Keep your hands flat (fingers aligned)</li>
+                    <li>Alternate raising left and right hands</li>
+                    <li>Complete 2 cycles to activate "67"</li>
+                </ol>
+            </div>
+
+            <div class="video-container">
+                <video id="video-feed" autoplay playsinline></video>
+                <canvas id="video-canvas"></canvas>
+            </div>
+
+            <div class="status-display">
+                <h2 id="gesture-status">Show 2 Hands</h2>
+                <p id="rep-count">Reps: 0</p>
+            </div>
+        </div>
+    </div>
+
     <div id="modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2 id="modal-title">Message</h2>
@@ -56,6 +82,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
